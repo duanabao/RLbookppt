@@ -1,0 +1,890 @@
+\documentclass[xcolor=dvipsnames,mathserif,9pt,handout]{beamer} %handout
+%\usefonttheme{serif}%{structurebold}%{structuresmallcapsserif}%{serif}
+
+\input{../common_before_document}
+
+
+\begin{document}
+
+\input{title_page}
+
+
+\begin{frame}
+\frametitle{Outline}
+\begin{figure}[h]
+  \centering
+\includegraphics[width=0.8\linewidth]{Figure_chapterRelationship.pdf}
+\end{figure}
+\end{frame}
+%---------------------
+\begin{frame}
+\frametitle{Introduction}
+In this lecture, we will move
+\begin{itemize}
+\item from \blue{value-based methods} to \red{policy-based methods}
+
+\item from \blue{value function methods} to \red{policy function methods} (or called policy gradient methods)
+\end{itemize}
+%Value function approximation:
+%\begin{itemize}
+%\item Goal: $\hat{v}(s,w)\rightarrow v_\pi(s)$
+%\end{itemize}
+
+\end{frame}
+%---------------------
+\begin{frame}
+\frametitle{Outline}
+\tableofcontents
+\end{frame}
+%--------------------------------------
+\AtBeginSection[]% put it to the start of each section
+{
+  \begin{frame}
+    \frametitle{Outline}
+    \tableofcontents[currentsection]
+  \end{frame}
+}
+\section{Basic idea of policy gradient}
+%---------------------
+\begin{frame}
+\frametitle{Basic idea of policy gradient}
+
+Previously, policies have been represented by tables:
+\begin{itemize}
+\item The action probabilities of all states are stored in a table $\pi(a|s)$. Each entry of the table is indexed by a state and an action.
+\end{itemize}
+{\scriptsize
+\begin{table}[h!]
+\centering
+%\resizebox{\columnwidth}{!}{
+\begin{tabular}{c|c|c|c|c|c}
+  % after \\: \hline or \cline{col1-col2} \cline{col3-col4} ...
+  \hline
+   & \blue{$a_1$} & \blue{$a_2$} & \blue{$a_3$} & \blue{$a_4$} & \blue{$a_5$} \\
+  \hline
+  \blue{$s_1$} & $\pi(a_1|s_1)$ & $\pi(a_2|s_1)$ & $\pi(a_3|s_1)$ & $\pi(a_4|s_1)$ & $\pi(a_5|s_1)$ \\
+  \hline
+  \vdots & \vdots & \vdots & \vdots & \vdots & \vdots \\
+  \hline
+  \blue{$s_9$} & $\pi(a_1|s_9)$ & $\pi(a_2|s_9)$ & $\pi(a_3|s_9)$ & $\pi(a_4|s_9)$ & $\pi(a_5|s_9)$ \\
+  \hline
+\end{tabular}
+%}
+\end{table}
+}
+
+\end{frame}
+%---------------------
+\begin{frame}
+\frametitle{Basic idea of policy gradient}
+
+Now, policies can be represented by parameterized functions:
+$$\pi(a|s,\theta)$$
+where $\theta\in\R^m$ is a parameter vector.
+\begin{itemize}
+\pause
+\item The function can be, for example, a neural network, whose input is $s$, output is the probability to take each action, and parameter is $\theta$.
+\pause
+\item \textbf{Advantage:} when the state space is large, the tabular representation will be of low efficiency in terms of storage and generalization.
+\pause
+\item The function representation is also sometimes written as $\pi(a,s,\theta)$, $\pi_\theta(a|s)$, or $\pi_\theta(a,s)$.
+\end{itemize}
+\end{frame}
+%---------------------
+\begin{frame}
+\frametitle{Basic idea of policy gradient}
+
+\textbf{Differences between tabular and function representations:
+}
+\pause
+\begin{itemize}
+\item
+\blue{First, how to define optimal policies?}
+\begin{itemize}
+%\pause
+\item[-] In the tabular case, a policy $\pi$ is optimal \red{if it can maximize \emph{every state value}}.
+\pause
+\item[-] In the function case, a policy $\pi$ is optimal \red{if it can maximize certain \emph{scalar metrics}}.
+\end{itemize}
+
+\end{itemize}
+
+\end{frame}
+%---------------------
+\begin{frame}
+\frametitle{Basic idea of policy gradient}
+
+\textbf{Differences between tabular and function representations:
+}\begin{itemize}
+\item
+\blue{Second, how to access the probability of an action?}
+\begin{itemize}
+%\pause
+\item[-] In the tabular case, the probability of taking $a$ at $s$ \red{can be directly accessed} by looking up the tabular policy.
+\pause
+\item[-] In the function case, we \red{need to calculate the value} of $\pi(a|s,\theta)$ given the function structure and the parameter.
+\end{itemize}
+\end{itemize}
+
+\end{frame}
+%---------------------
+\begin{frame}
+\frametitle{Basic idea of policy gradient}
+
+\textbf{Differences between tabular and function representations:
+}\begin{itemize}
+\item
+\blue{Third, how to update policies?}
+\begin{itemize}
+%\pause
+\item[-] In the tabular case, a policy $\pi$ \red{can be updated by directly changing the
+    entries in the table}.
+\pause
+\item[-] In the function case, a policy $\pi$ cannot be updated in this way anymore. Instead, it \red{can only be updated by changing \emph{the parameter $\theta$}.}
+\end{itemize}
+
+\end{itemize}
+
+\end{frame}
+%---------------------
+\begin{frame}
+\frametitle{Basic idea of policy gradient}
+
+The basic idea of the policy gradient is simple:
+\begin{itemize}
+%\pause
+\item \blue{First, metrics (or objective functions) to define optimal policies:} $J(\theta)$, which can define optimal policies.
+\pause
+\item \blue{Second, gradient-based optimization algorithms to search for optimal policies:}
+\begin{align*}
+\theta_{t+1}=\theta_t + \alpha \nabla_{\theta} J(\theta_t)
+\end{align*}
+\end{itemize}
+\pause
+\vspace{10pt}
+Although the idea is simple, the complication emerges when we try to answer the following questions.
+\begin{itemize}
+\pause
+\item \blue{What appropriate metrics should be used?}
+\pause
+\item \blue{How to calculate the gradients of the metrics?}
+\end{itemize}
+\pause
+These questions will be answered in detail in this lecture.
+\end{frame}
+%--------------------------------------
+\AtBeginSection[]% put it to the start of each section
+{
+  \begin{frame}
+    \frametitle{Outline}
+    \tableofcontents[currentsection]
+  \end{frame}
+}
+\section{Metrics to define optimal policies}
+%---------------------
+\subsection{Metric 1: Average value}
+\begin{frame}
+ \frametitle{Outline}
+ \tableofcontents[currentsection]
+\end{frame}
+\begin{frame}
+\frametitle{Metric 1: average value}
+The first metric is the \blue{average state value} or simply called \blue{average value}:
+\begin{align*}
+\bar{v}_{\pi}
+&=\sum_{s\in\S} d(s)v_{\pi}(s)
+\end{align*}
+\begin{itemize}
+\item $\bar{v}_{\pi}$ is a weighted average of the state values.
+\item $d(s)\ge0$ is the weight for state $s$.
+
+\end{itemize}
+
+\pause
+\vspace{10pt}
+Since $\sum_{s\in\S} d(s)=1$, we can interpret $d(s)$ as a \blue{probability distribution}.
+Then, the metric can be written as
+\begin{align*}
+\bar{v}_{\pi}
+&=\E_{S\sim d}[v_\pi(S)]
+\end{align*}
+\end{frame}
+%%---------------------
+%\begin{frame}
+%\frametitle{Metric 1: average value}
+%\textbf{Vector-product form:
+%}
+%\begin{align*}
+%\bar{v}_{\pi}
+%&=\sum_{s\in\S} d(s)v_{\pi}(s)=d^Tv_{\pi}
+%\end{align*}
+%\pause
+%where
+%\begin{align*}
+%v_{\pi}&=[\dots,v_{\pi}(s),\dots]^T\in\R^{|\S|}\\
+%d&=[\dots,d(s),\dots]^T\in\R^{|\S|}.
+%\end{align*}
+%This expression is particularly useful when we analyze its gradient.
+%\end{frame}
+%---------------------
+\begin{frame}
+\frametitle{Metric 1: average value}
+
+\textbf{How to select the distribution $d$? There are two cases.}
+\vspace{5pt}
+
+\pause
+\blue{Case 1: $d$ is \textbf{independent} of the policy $\pi$.}
+\begin{itemize}
+\pause
+\item This case is relatively simple because the gradient of the metric is easier to calculate: $\nabla_\theta \bar{v}_\pi=d^T\nabla_\theta v_\pi$
+\pause
+\item In this case, we specifically denote $d$ as $d_0$ and $\bar{v}_\pi$ as $\bar{v}_{\pi}^0$.
+\end{itemize}
+
+\pause
+\vspace{5pt}
+How to select $d_0$?
+\begin{itemize}
+\item One trivial way is to treat all the states \blue{equally important} and hence select $d_0(s)=1/|\S|$.
+\pause
+\item Another important case is that we are only interested in \blue{a specific state} $s_0$.
+For example, the episodes in some tasks always start from the same state $s_0$. Then, we only care about the long-term return starting from $s_0$.
+In this case,
+$$d_0(s_0)=1,\quad d_0(s\ne s_0)=0$$
+In this case, \blue{$\bar{v}_\pi=v_\pi(s_0)$}
+\end{itemize}
+\end{frame}
+%---------------------
+\begin{frame}
+\frametitle{Metric 1: average value}
+\textbf{How to select the distribution $d$? There are two cases.}
+
+\vspace{10pt}
+\blue{Case 2: $d$ \textbf{depends} on the policy $\pi$.}
+
+\pause
+\begin{itemize}
+\item A common way is to select $d$ as $d_{\pi}(s)$, which is the \blue{stationary distribution} under $\pi$. Details of stationary distribution can be found in the last lecture and the book.
+%\begin{itemize}
+%\pause
+%\item
+%One basic property of $d_\pi$ is that it satisfies
+%\begin{align*}
+%d_{\pi}^T P_{\pi}=d_{\pi}^T,
+%\end{align*}
+%where $P_{\pi}$ is the state transition probability matrix.
+%\end{itemize}
+\pause
+\item
+The interpretation of selecting $d_{\pi}$ is as follows.
+\begin{itemize}
+\item[-] $d_\pi$ reflects the long-run behavior of the Markov decision process under a given policy $\pi$.
+\item[-] If one state is frequently visited in the long run, it is more important and deserves more weight.
+\item[-] If a state is hardly visited, then we give it less weight.
+\end{itemize}
+\end{itemize}
+\end{frame}
+%---------------------
+\begin{frame}
+\frametitle{Metric 1: average value}
+
+\textbf{An important equivalent expression:}
+
+You will see the following metric often in the literature:
+\begin{align*}
+J(\theta)=\lim_{n\rightarrow\infty}\E\left[\sum_{t=0}^n \gamma^t R_{t+1}\right]=\E\left[\sum_{t=0}^\infty \gamma^t R_{t+1}\right].
+\end{align*}
+
+\pause
+Question: What is its relationship to the metric we introduced just now?
+
+Answer: \blue{They are the same.}
+\pause
+That is because
+%\pause
+%\begin{itemize}
+%\item It starts from $S_0\sim d$ and then $A_0,R_1,S_1,A_1,R_2,S_2,\dots$
+%\item $A_t\sim \pi(S_t)$ and $R_{t+1},S_{t+1}\sim p(R_{t+1}|S_t,A_t), p(S_{t+1}|S_t,A_t)$
+%\end{itemize}
+%Then,
+\begin{align*}
+J(\theta)
+=\E\left[\sum_{t=0}^\infty \gamma^t R_{t+1}\right]
+&=\sum_{s\in\S}d(s)\E\left[\sum_{t=0}^\infty \gamma^t R_{t+1}|S_0=s\right]\\
+\visible<4->{
+&=\sum_{s\in\S}d(s)v_\pi(s)\\}
+\visible<5->{&=\red{\bar{v}_\pi}}
+\end{align*}
+\end{frame}
+%---------------------
+\subsection{Metric 2: Average reward}
+\begin{frame}
+ \frametitle{Outline}
+ \tableofcontents[currentsection]
+\end{frame}
+\begin{frame}
+\frametitle{Metric 2: average reward}
+The second metric is \blue{average one-step reward} or simply \blue{average reward}:
+\begin{align*}%\label{chapterGP_eq_defAverReward}
+\bar{r}_{\pi}
+\doteq\sum_{s\in\S} d_{\pi}(s)r_{\pi}(s)=\E[r_{\pi}(S)],
+\end{align*}
+where
+$S\sim d_\pi$,
+$$r_{\pi}(s)=\sum_{a\in\A} \pi(a|s)r(s,a)$$
+$$r(s,a)=\E[R|s,a]=\sum_r rp(r|s,a)$$
+
+\pause
+\vspace{10pt}
+Remarks:
+\begin{itemize}
+\item $\bar{r}_{\pi}$ is simply a weighted average of immediate rewards.
+\item $r_{\pi}(s)$ is the average immediate reward that can be obtained from $s$.
+\item $d_{\pi}$ is the stationary distribution.
+\end{itemize}
+
+\end{frame}
+%%---------------------
+%\begin{frame}
+%\frametitle{Metric 2: average reward}
+%The average reward can also be written as the inner product of two vectors.
+%
+%In particular, let
+%\begin{align*}
+%r_{\pi}&=[\dots,r_{\pi}(s),\dots]^T\in\R^{|\S|}
+%\end{align*}
+%be the vector of one-step immediate rewards. Then, we have
+%$$\bar{r}_{\pi}= d_{\pi}^Tr_{\pi}.$$
+%\end{frame}
+%---------------------
+\begin{frame}
+\frametitle{Metric 2: average reward}
+
+\textbf{An important equivalent expression:}
+
+\begin{itemize}
+\item Suppose an agent follows a given policy and generate a trajectory with the rewards as $(R_{1},R_{2},\dots)$.
+\item The average single-step reward along this trajectory is
+\begin{align*}%\label{chapterGP_eq_defAverReward2}
+&\lim_{n\rightarrow \infty}\frac{1}{n}\E\Big[R_1+R_{2}+\dots+R_{n}|S_0=s_0\Big]\\
+=&\lim_{n\rightarrow \infty}\frac{1}{n}\E\left[\sum_{t=0}^{n-1} R_{t+1}|S_0=s_0\right]
+\end{align*}
+where $s_0$ is the starting state of the trajectory.
+\end{itemize}
+
+\end{frame}
+%---------------------
+\begin{frame}
+\frametitle{Metrics to define optimal policies - Remarks}
+An important fact is that
+\begin{align*}%\label{chapterGP_eq_defAverReward_equiv}
+\lim_{n\rightarrow \infty}\frac{1}{n}\E\left[\sum_{t=0}^{n-1} R_{t+1}|S_0=s_0\right]&=\lim_{n\rightarrow \infty}\frac{1}{n}\E\left[\sum_{t=0}^{n-1} R_{t+1}\right]\\
+\visible<2->{&=\sum_s d_{\pi}(s)r_{\pi}(s)\\}
+\visible<3->{&=\red{\bar{r}_\pi}}
+\end{align*}
+\pause\pause\pause
+Remarks:
+\begin{itemize}
+\item Highlight: the starting state $s_0$ does not matter.
+\item The derivation of the equation is nontrivial and can be found in my book.
+\end{itemize}
+\end{frame}
+%---------------------
+\subsection{Summary of the two metrics}
+\begin{frame}
+ \frametitle{Outline}
+ \tableofcontents[currentsection]
+\end{frame}
+
+\begin{frame}
+\frametitle{Summary of the two metrics}
+
+\begin{table}[h]
+\centering
+{\setstretch{2}
+%\resizebox{\columnwidth}{!}{
+\begin{tabular}{c|c|c|c}%{|p{0.45\textwidth}|p{0.45\textwidth}|}
+  % after \\: \hline or \cline{col1-col2} \cline{col3-col4} ...
+  \hline
+  {Metric} & {Expression 1} & {Expression 2} & {Expression 3}\\
+  \hline
+  $\bar{v}_\pi $ & $\sum_{s\in\S} d(s) v_\pi(s)$ & $\E_{S\sim d}[v_\pi(S)]$ & $\lim_{n\rightarrow \infty}\E\big[\sum_{t=0}^n \gamma^t R_{t+1}\big]$ \\
+  \hline
+  $\bar{r}_\pi $ & $\sum_{s\in\S} d_\pi(s) r_\pi(s)$ & $\E_{S\sim d_\pi}[r_\pi(S)]$ & $\lim_{n\rightarrow \infty}\frac{1}{n}\E\big[\sum_{t=0}^{n-1} R_{t+1}\big]$ \\
+  \hline
+\end{tabular}
+}%\setstretch
+\caption{Summary of the different but equivalent expressions of $\bar{v}_\pi $ and $\bar{r}_\pi $.}
+\label{chapterPG_table_summaryMetrics}
+\end{table}
+
+\end{frame}
+%---------------------
+
+\begin{frame}
+\frametitle{Summary of the two metrics}
+
+\textbf{Remark 1 about the metrics:
+}
+\begin{itemize}
+%\pause
+\item All these metrics are \blue{functions of $\pi$}.
+%\pause
+\item Since $\pi$ is parameterized by $\theta$, these metrics are \blue{functions of $\theta$}.
+%\pause
+\item In other words, different values of $\theta$ can generate different metric values.
+\end{itemize}
+
+Therefore, we can search for the \blue{optimal values of $\theta$} to maximize these metrics.
+This is the basic idea of policy gradient methods.
+\end{frame}
+%---------------------
+\begin{frame}
+\frametitle{Summary of the two metrics}
+
+\textbf{Remark 2 about the metrics:
+}
+\begin{itemize}
+\item One complication is that the metrics can be defined in either the \blue{discounted case} where $\gamma\in(0,1)$ or the \blue{undiscounted case} where $\gamma=1$.
+\item The undiscounted case is nontrivial.
+\item We only consider the discounted case so far in this book. For details about the undiscounted case, see the book.
+\end{itemize}
+
+\end{frame}
+%---------------------
+\begin{frame}
+\frametitle{Summary of the two metrics}
+
+\textbf{Remark 3 about the metrics:
+}
+\begin{itemize}
+\item What is the relationship between $\bar{r}_{\pi}$ and $\bar{v}_{\pi}$?
+\item The two metrics are \blue{equivalent} (not equal) to each other.
+Specifically, in the discounted case where $\gamma<1$, it holds that
+\begin{align*}
+\bar{r}_\pi=(1-\gamma)\bar{v}_\pi.
+\end{align*}
+Therefore, they can be \blue{maximized simultaneously}.
+See the proof in the book.
+\end{itemize}
+
+\end{frame}
+%--------------------------------------
+\AtBeginSection[]% put it to the start of each section
+{
+  \begin{frame}
+    \frametitle{Outline}
+    \tableofcontents[currentsection]
+  \end{frame}
+}
+\section{Gradients of the metrics}
+%---------------------
+\begin{frame}
+\frametitle{Gradients of the metrics}
+
+Given a metric, we next
+\begin{itemize}
+\item derive its gradient
+\item and then, apply gradient-based methods to optimize the metric.
+\end{itemize}
+
+\pause
+\vspace{10pt}
+The gradient calculation is one of \blue{the most complicated parts} of policy gradient methods!
+%\pause
+That is because
+\begin{itemize}
+\item first, we need to \blue{distinguish} \red{different metrics $\bar{v}_\pi$, $\bar{r}_\pi$, $\bar{v}_\pi^0$}
+%\pause
+\item second, we need to \blue{distinguish} \red{discounted and undiscounted cases}.
+\end{itemize}
+
+%\pause
+%\vspace{10pt}
+%The calculation of the gradients:
+%\begin{itemize}
+%\item We will not discuss the details in this lecture.
+%\item Interested readers may see my book for details.
+%\end{itemize}
+\end{frame}
+%---------------------
+\begin{frame}
+\frametitle{Gradients of the metrics}
+I simply give the expression of the gradient without proof:
+\begin{align*}%\label{chapterGP_eq_gradientVs0}
+\nabla_{\theta} J(\theta)=\sum_{s\in\S}\eta(s)\sum_{a\in\A} \nabla_{\theta}\pi(a|s,\theta)q_{\pi}(s,a)
+\end{align*}
+\pause
+The above is a \blue{unified expression of many cases}:
+\begin{itemize}
+\item $J(\theta)$ can be $\bar{v}_\pi$, $\bar{r}_\pi$, or $\bar{v}_\pi^0$.
+\item ``='' may denote strict equality, approximation, or proportional to.
+\item $\eta$ is a distribution or weight of the states.
+\end{itemize}
+
+\pause
+\vspace{10pt}
+The derivation of this expression is \textbf{very complex}.
+
+Details are not given here. Interested readers can read my book.
+
+For most readers, it is sufficient to know this expression.
+\end{frame}
+%%---------------------
+%\begin{frame}
+%\frametitle{Gradients of the metrics}
+%Some specific results:
+%\begin{align*}%\label{chapterGP_eq_gradient1}
+%\nabla_{\theta}\bar{r}_{\pi}\simeq\sum_s d_{\pi}(s)\sum_a \nabla_{\theta}\pi(a|s,\theta)q_{\pi}(s,a),
+%\end{align*}
+%
+%$$\nabla_\theta\bar{v}_{\pi}=\frac{1}{1-\gamma}\nabla_\theta\bar{r}_{\pi}$$
+%
+%\begin{align*}%\label{chapterGP_eq_gradientVs0}
+%\nabla_{\theta} \bar{v}^0_\pi=\sum_{s\in\S}\rho_\pi(s)\sum_{a\in\A} \nabla_{\theta}\pi(a|s,\theta)q_{\pi}(s,a)
+%\end{align*}
+%
+%Details are not given here. Interested readers can read my book.
+%\end{frame}
+%---------------------
+\begin{frame}
+\frametitle{Gradients of the metrics}
+
+\textbf{A compact and important expression of the gradient:}
+\begin{align*}
+\blue{\nabla_\theta J(\theta)}
+&=\sum_{s\in\S}\eta(s)\sum_{a\in\A} \nabla_{\theta}\pi(a|s,\theta)q_{\pi}(s,a)\\
+&\visible<2->{\blue{=\E_{S\sim \eta,A\sim \pi}\big[\nabla_{\theta} \ln \pi(A|S,\theta)q_{\pi}(S,A)\big]}}
+\end{align*}
+
+\par\noindent\rule{\textwidth}{0.1pt}
+
+\pause\pause
+\textbf{First, why is this expression useful?}
+\begin{itemize}
+\item Because we can use samples to approximate the gradient:
+$$\nabla_{\theta}J\approx\nabla_{\theta} \ln \pi(a|s,\theta)q_{\pi}(s,a)$$
+where $s,a$ are samples. This is the idea of stochastic gradient descent.
+\end{itemize}
+
+\end{frame}
+%---------------------
+\begin{frame}
+\frametitle{Gradients of the metrics}
+
+\textbf{A compact and important expression of the gradient:}
+\begin{align*}
+\blue{\nabla_\theta J(\theta)}
+&=\sum_{s\in\S}\eta(s)\sum_{a\in\A} \nabla_{\theta}\pi(a|s,\theta)q_{\pi}(s,a)\\
+&\blue{=\E_{S\sim \eta,A\sim \pi}\big[\nabla_{\theta} \ln \pi(A|S,\theta)q_{\pi}(S,A)\big]}
+\end{align*}
+
+\par\noindent\rule{\textwidth}{0.1pt}
+
+\textbf{Second, how to prove the above equation?}
+
+\pause
+Proof:
+Consider the function $\ln \pi$ where $\ln$ is the natural logarithm.
+It is easy to see that
+\begin{align*}
+\nabla_{\theta} \ln \pi(a|s,\theta)= \frac{\nabla_{\theta} \pi(a|s,\theta)}{\pi(a|s,\theta)}
+\end{align*}
+\pause
+and hence
+\begin{align*}%\label{chapterGP_eq_lnpi}
+\nabla_{\theta} \pi(a|s,\theta)
+&=\pi(a|s,\theta)\nabla_{\theta} \ln \pi(a|s,\theta).
+\end{align*}
+\end{frame}
+%---------------------
+\begin{frame}
+\frametitle{Gradients of the metrics}
+\textbf{A compact and important expression of the gradient:}
+\begin{align*}
+\blue{\nabla_\theta J(\theta)}
+&=\sum_{s\in\S}\eta(s)\sum_{a\in\A} \nabla_{\theta}\pi(a|s,\theta)q_{\pi}(s,a)\\
+&\blue{=\E_{S\sim \eta,A\sim \pi}\big[\nabla_{\theta} \ln \pi(A|S,\theta)q_{\pi}(S,A)\big]}
+\end{align*}
+
+\par\noindent\rule{\textwidth}{0.1pt}
+
+Proof (continued): Then, we have
+\begin{align*}
+\nabla_{\theta}J
+&=\sum_s \eta(s) \sum_a \blue{\nabla_{\theta} \pi(a|s,\theta)}q_{\pi}(s,a)\\
+\visible<2->{
+&=\sum_s \eta(s) \sum_a \blue{\pi(a|s,\theta)\nabla_{\theta} \ln \pi(a|s,\theta)}q_{\pi}(s,a)\\}
+\visible<3->{
+&=\E_{\red{S\sim \eta}}\left[\sum_a \pi(a|S,\theta)\nabla_{\theta} \ln \pi(a|S,\theta)q_{\pi}(S,a)\right]\\}
+\visible<4->{
+&=\E_{S\sim \eta,\red{A\sim\pi}}\big[\nabla_{\theta} \ln \pi(A|S,\theta)q_{\pi}(S,A)\big]\\}
+%\visible<5->{&\doteq\E\big[\nabla_{\theta} \ln \pi(A|S,\theta)q_{\pi}(S,A)\big]}
+\end{align*}
+\end{frame}
+%---------------------
+\begin{frame}
+\frametitle{Gradients of the metrics}
+\textbf{Remarks:} It is required by $\ln \pi(a|s,\theta)$ that for any $s,a,\theta$ $$\pi(a|s,\theta)>0$$
+
+\pause
+\begin{itemize}
+\item This can be achieved by using \blue{softmax functions} that can normalize the entries in a vector from $(-\infty,+\infty)$ to $(0,1)$.
+\begin{itemize}
+\item[-] For example, for any vector $x=[x_1,\dots,x_n]^T$,
+    $$z_i=\frac{e^{x_i}}{\sum_{j=1}^n e^{x_j}}$$
+    where $z_i\in(0,1)$ and $\sum_{i=1}^n z_i=1$.
+\end{itemize}
+\pause
+\item Specifically, the policy function has the form of
+\begin{align*}
+\pi(a|s,\theta)=\frac{e^{h(s,a,\theta)}}{\sum_{a'\in\A}e^{h(s,a',\theta)}}
+\end{align*}
+where $h(s,a,\theta)$ is another function to be learned.
+\end{itemize}
+\end{frame}
+%---------------------
+\begin{frame}
+\frametitle{Gradients of the metrics}
+\textbf{Remarks:}
+\begin{itemize}
+\item
+Such a form based on the softmax function can be realized by a neural network whose input is $s$ and parameter is $\theta$. The network has $|\A|$ outputs, each of which corresponds to $\pi(a|s,\theta)$ for an action $a$. The activation function of the output layer should be softmax.
+\pause
+\item
+Since $\pi(a|s,\theta)>0$ for all $a$, the parameterized policy is \blue{stochastic} and hence \blue{exploratory}.
+\pause
+\begin{itemize}
+\item[-]
+There also exist \blue{deterministic} policy gradient (DPG) methods. We will study in the next lecture.
+\end{itemize}
+\end{itemize}
+\end{frame}
+%--------------------------------------
+\AtBeginSection[]% put it to the start of each section
+{
+  \begin{frame}
+    \frametitle{Outline}
+    \tableofcontents[currentsection]
+  \end{frame}
+}
+\section{Gradient-ascent algorithm}
+%---------------------
+\begin{frame}
+\frametitle{Gradient-ascent algorithm}
+Now, we present \blue{the first policy gradient algorithm} to find optimal policies!
+\begin{itemize}
+\pause
+\item[1)]
+The gradient-ascent algorithm maximizing $J(\theta)$ is
+\begin{align*}%\label{chapterGP_eq_REINFORCE_updateruleExp}
+\theta_{t+1}
+&=\theta_t+\alpha \nabla_{\theta} J(\theta_t)\nonumber\\
+&=\theta_t+\alpha \E\Big[\nabla_{\theta} \ln \pi(A|S,\theta_t)q_{\pi}(S,A)\Big]
+\end{align*}
+
+\pause
+\item[2)] Since the true gradient is unknown, we can replace it by a stochastic one:
+\begin{align*}%\label{chapterGP_eq_REINFORCE_updaterule}
+\theta_{t+1}
+&=\theta_t+\alpha \nabla_{\theta} \ln \pi(a_t|s_t,\theta_t)q_\pi(s_t,a_t)
+\end{align*}
+
+\pause
+\item[3)] Furthermore, since $q_\pi$ is unknown, it can be replaced by an estimate:
+\begin{align*}%\label{chapterGP_eq_REINFORCE_updaterule}
+\theta_{t+1}
+&=\theta_t+\alpha \nabla_{\theta} \ln \pi(a_t|s_t,\theta_t)\blue{q_t(s_t,a_t)}
+\end{align*}
+%\pause
+%There are different methods to estimate $q_\pi(s_t,a_t)$
+%\begin{itemize}
+%\item In this lecture, Monte-Carlo based method
+%\item In the next lecture, TD method and more
+%\end{itemize}
+\end{itemize}
+\end{frame}
+%---------------------
+\begin{frame}
+\frametitle{Gradient-ascent algorithm}
+%\begin{align*}%\label{chapterGP_eq_REINFORCE_updaterule}
+%\theta_{t+1}
+%&=\theta_t+\alpha \nabla_{\theta} \ln \pi(a_t|s_t,\theta_t)q_t(s_t,a_t)
+%\end{align*}
+%where $q_t(s_t,a_t)$ is an approximation of $q_{\pi}(s_t,a_t)$.
+%\pause
+\begin{itemize}
+\item If $q_\pi(s_t,a_t)$ is estimated by Monte Carlo estimation, the algorithm has a specifics name, \blue{REINFORCE}.
+\pause
+\item REINFORCE is one of earliest and simplest policy gradient algorithms.
+\pause
+\item Many other policy gradient algorithms such as the actor-critic methods can be obtained by extending REINFORCE (next lecture).
+\end{itemize}
+
+\pause
+\begin{figure}[t]
+{\small
+\begin{mdframed}[style=myAlgo,nobreak=true,frametitle={Pseudocode: Policy Gradient by Monte Carlo (REINFORCE)}]
+{\fontfamily{cmss}\selectfont
+\textbf{Initialization:} Initial parameter $\theta$; $\gamma\in(0,1)$; $\alpha>0$.
+
+\textbf{Goal:} Learn an optimal policy to maximize $J(\theta)$.
+
+\vspace{5pt}
+
+For each episode, do
+
+\setlength{\leftskip}{2em}
+Generate an episode $\{s_0,a_0,r_1,\dots,s_{T-1},a_{T-1},r_T\}$ following $\pi(\theta)$.
+
+\setlength{\leftskip}{2em}
+For $t=0,1,\dots,T-1$:
+
+\setlength{\leftskip}{4em} % \quad=1em
+\emph{Value update:} $q_t(s_t,a_t)=\sum_{k=t+1}^T \gamma^{k-t-1} r_k$
+
+\qquad\qquad
+\emph{Policy update:}  $\theta\leftarrow \theta+\alpha \nabla_{\theta} \ln \pi(a_t|s_t,\theta)q_t(s_t,a_t)$
+}%font
+\end{mdframed}
+}
+\end{figure}
+\end{frame}
+%---------------------
+\begin{frame}
+\frametitle{Gradient-ascent algorithm}
+\textbf{Remark 1: How to do sampling?}
+\begin{align*}
+\E_{\blue{S\sim \eta,A\sim\pi}}\Big[\nabla_{\theta} \ln \pi(A|S,\theta_t)q_{\pi}(S,A)\Big]\longrightarrow \nabla_{\theta} \ln \pi(a|s,\theta_t)q_{\pi}(s,a)
+\end{align*}
+
+\pause
+%\noindent\rule{\textwidth}{0.3pt}
+\begin{itemize}
+\item How to sample $S$?
+\begin{itemize}
+\item[-] $S\sim \eta$, where the distribution $\eta$ is a long-run behavior under $\pi$.
+\item[-] In practice, people usually do not care about it.
+\end{itemize}
+\pause
+\item How to sample $A$?
+\begin{itemize}
+\item[-] $A\sim \pi(A|S,\theta)$. Hence, $a_t$ should be sampled following $\pi(\theta_t)$ at $s_t$.
+\item[-] Therefore, \blue{policy gradient methods are on-policy}.
+\end{itemize}
+\end{itemize}
+\end{frame}
+%---------------------
+\begin{frame}
+\frametitle{Gradient-ascent algorithm}
+
+\textbf{Remark 2: How to interpret this algorithm?}
+
+\vspace{10pt}
+\pause
+Since
+$$\nabla_{\theta} \ln \pi(a_t|s_t,\theta_t)=\frac{\nabla_{\theta}\pi(a_t|s_t,\theta_t)}{\pi(a_t|s_t,\theta_t)}$$
+
+\pause
+the algorithm can be rewritten as
+\begin{align*}
+\theta_{t+1}
+&=\theta_t+\alpha \nabla_{\theta} \ln \pi(a_t|s_t,\theta_t)q_t(s_t,a_t)\\
+&=\theta_t+\alpha \underbrace{\left(\frac{q_{t}(s_t,a_t)}{\pi(a_t|s_t,\theta_t)}\right)}_{\beta_t}\nabla_{\theta} \pi(a_t|s_t,\theta_t).
+\end{align*}
+\pause
+Therefore, we have the important expression of the algorithm:
+\begin{align*}
+\blue{\theta_{t+1}=\theta_t+\alpha\red{\beta_t}\nabla_{\theta} \pi(a_t|s_t,\theta_t)}
+\end{align*}
+\end{frame}
+%---------------------
+\begin{frame}
+\frametitle{Gradient-ascent algorithm}
+The interpretation of
+\begin{align*}
+\blue{\theta_{t+1}=\theta_t+\alpha\red{\beta_t}\nabla_{\theta} \pi(a_t|s_t,\theta_t)}
+\end{align*}
+is as follows. Suppose that $\alpha$ is sufficiently small.
+
+\pause
+\vspace{10pt}
+\textbf{Interpretation:}
+\begin{itemize}
+\item \blue{If $\beta_t>0$}, \red{the probability of choosing $(s_t,a_t)$ is increased:}
+    \blue{\begin{align*}
+    \pi(a_t|s_t,\theta_{t+1})>\pi(a_t|s_t,\theta_{t})
+    \end{align*}}
+\vspace{-10pt}
+%The greater $\beta_t$ is, the stronger the enhancement is.
+\pause
+\item \blue{If $\beta_t<0$, \red{the probability of choosing $(s_t,a_t)$ is lower:}
+$$\pi(a_t|s_t,\theta_{t+1})<\pi(a_t|s_t,\theta_{t})$$}
+\end{itemize}
+\pause
+\vspace{-10pt}
+\textbf{Math:} When $\theta_{t+1}-\theta_{t}$ is sufficiently small, the definition of differential implies
+\begin{align*}
+\pi(a_t|s_t,\blue{\theta_{t+1}})
+&\approx\pi(a_t|s_t,\blue{\theta_{t}})+(\nabla_\theta \pi(a_t|s_t,\theta_t))^T(\blue{\theta_{t+1}-\theta_{t}})\\
+\visible<5->{
+&=\pi(a_t|s_t,\blue{\theta_{t}})+\blue{\alpha}\red{\beta_t}(\nabla_\theta \pi(a_t|s_t,\theta_t))^T(\blue{\nabla_{\theta} \pi(a_t|s_t,\theta_t)})\\
+&=\pi(a_t|s_t,\blue{\theta_{t}})+\blue{\alpha}\red{\beta_t}\|\nabla_\theta \pi(a_t|s_t,\theta_t)\|^2}
+\end{align*}
+
+
+
+\end{frame}
+%---------------------
+\begin{frame}
+\frametitle{Gradient-ascent algorithm}
+\vspace{-20pt}
+\begin{align*}
+\theta_{t+1}
+&=\theta_t+\alpha \underbrace{\left(\blue{\frac{q_{t}(s_t,a_t)}{\pi(a_t|s_t,\theta_t)}}\right)}_{\beta_t}\nabla_{\theta} \pi(a_t|s_t,\theta_t)
+\end{align*}
+
+\textbf{Interpretation (continued)}: $\beta_t$ can \blue{balance exploration and exploitation}.
+
+\pause
+\vspace{10pt}
+The reason is as follows.
+\begin{itemize}
+\item First, \red{$\beta_t$ is \blue{proportional} to $q_{t}(s_t,a_t)$.}
+$$\text{greater } q_t(s_t,a_t) \Longrightarrow \text{greater } \beta_t \Longrightarrow \text{greater } \pi(a_t|s_t,\theta_{t+1})$$
+Therefore, the algorithm intends to \blue{exploit} actions with greater values.
+
+\pause
+\item Second, \red{$\beta_t$ is \blue{inversely proportional} to $\pi(a_t|s_t,\theta_t)$} (when $q_t(s_t,a_t)>0$).
+$$\text{smaller } \pi(a_t|s_t,\theta_t) \Longrightarrow \text{greater } \beta_t \Longrightarrow \text{greater } \pi(a_t|s_t,\theta_{t+1})$$
+Therefore, the algorithm intends to \blue{explore} actions that have low probabilities.
+\end{itemize}
+\end{frame}
+%--------------------------------------
+\AtBeginSection[]% put it to the start of each section
+{
+  \begin{frame}
+    \frametitle{Outline}
+    \tableofcontents[currentsection]
+  \end{frame}
+}
+\section{Summary}
+%---------------------
+\begin{frame}
+\frametitle{Summary}
+Contents of this lecture:
+\begin{itemize}
+\item Metrics for optimality
+\item Gradients of the metrics
+\item Gradient-ascent algorithm
+\item A special case: REINFORCE
+\end{itemize}
+
+Next lecture: Actor-critic
+\end{frame}
+%---------------------
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%\bibliographystyle{plainnat}
+%\bibliography{myOwnPub,zsyReferenceAll}
+\end{document}

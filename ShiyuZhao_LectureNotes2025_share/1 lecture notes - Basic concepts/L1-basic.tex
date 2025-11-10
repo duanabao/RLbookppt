@@ -1,0 +1,690 @@
+\documentclass[xcolor=dvipsnames,mathserif,9pt]{beamer} %handout
+%\usefonttheme{serif}%{structurebold}%{structuresmallcapsserif}%{serif}
+
+%\input{before_document}
+\input{../common_before_document}
+
+
+\usepackage{multimedia}
+\linespread{1.1}
+\newcommand{\hl}{$\triangleright$ }
+%\newcommand{\blue}[1]{\textcolor{blue}{#1}} % skew symmetric operator
+\begin{document}
+
+\input{title_page}
+
+%------------------------------------------
+\begin{frame}
+\frametitle{Outline}
+\begin{figure}[h]
+  \centering
+\includegraphics[width=0.8\linewidth]{fig_bookMap1.pdf}
+\end{figure}
+\end{frame}
+%------------------------------------------
+\begin{frame}
+\frametitle{Contents}
+
+\begin{itemize}
+\item First, introduce fundamental concepts in reinforcement learning (RL) by examples.
+\vspace{10pt}
+\item Second, formalize the concepts in the context of Markov decision processes.
+\end{itemize}
+\end{frame}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\begin{frame}
+\frametitle{A grid-world example}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.3\linewidth]{fig_gridIntuition}\quad
+  \visible<1->{\includegraphics[width=0.31\linewidth]{fig_3x3gridFog.pdf}}
+\end{figure}
+
+An illustrative example used throughout this course:
+\begin{itemize}
+\item Grid of cells: Accessible/forbidden/target cells, boundary.
+\item Very easy to understand and useful for illustration
+\end{itemize}
+
+\pause
+Task:
+\begin{itemize}
+\item Given any starting area, find a ``good'' way to the target.
+\item How to define ``good''? Avoid forbidden cells, detours, or boundary.
+\end{itemize}
+
+\end{frame}
+%******************************************************************************
+\begin{frame}
+\frametitle{State}
+\blue{\emph{State}}: The status of the agent with respect to the environment.
+\begin{itemize}
+\item For the grid-world example, the location of the agent is the state. There are nine possible locations and hence nine states: $s_1,s_2,\dots,s_9$.
+\end{itemize}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.3\linewidth]{fig_gridDemoState}
+\end{figure}
+\pause
+\blue{\emph{State space:}} the set of all states $\S=\{s_i\}_{i=1}^9$.
+
+\end{frame}
+%******************************************************************************
+\begin{frame}
+\frametitle{Action}
+
+\emph{\blue{Action}}: For each state, there are five possible actions: $a_1,\dots,a_5$
+\begin{itemize}
+\item $a_1$: move upward;
+\item $a_2$: move rightward;
+\item $a_3$: move downward;
+\item $a_4$: move leftward;
+\item $a_5$: stay still;
+\end{itemize}
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.3\linewidth]{fig_gridDemoAction} \qquad \includegraphics[width=0.25\linewidth]{fig_gridDemoState}
+\end{figure}
+\pause
+\blue{Action space of a state}: the set of all possible actions of a state. $\A(s_i)=\{a_k\}_{k=1}^5$.
+
+\pause
+\blue{Question}: can different states have different sets of actions?
+\end{frame}
+%******************************************************************************
+\begin{frame}
+\frametitle{State transition}
+\begin{figure}
+  \centering
+  %\vspace{-30pt}
+  \includegraphics[width=0.2\linewidth]{fig_gridDemoState}
+  %\vspace{10pt}
+\end{figure}
+When taking an action, the agent may move from one state to another. Such a process is called \emph{\blue{state transition}}.
+\begin{itemize}
+\pause
+\item Example: In state $s_1$, if we choose action $a_2$, then what is the next state?
+$$s_1\xrightarrow{a_2}s_2$$
+
+\pause
+\item Example: In state $s_1$, if we choose action $a_1$, then what is the next state?
+$$s_1\xrightarrow{a_1}s_1$$
+\end{itemize}
+\pause
+\begin{itemize}
+\item State transition describes the interaction with the environment.
+\pause
+\item \blue{Question:} Can we define the state transition in other ways? Simulation vs physics
+\end{itemize}
+\end{frame}
+%******************************************************************************
+\begin{frame}
+\frametitle{State transition}
+\begin{figure}
+  \centering
+  %\vspace{-30pt}
+  \includegraphics[width=0.2\linewidth]{fig_gridDemoState}
+  %\vspace{10pt}
+\end{figure}
+Pay attention to \blue{forbidden areas}: Example: in state $s_5$, if we choose action $a_2$, then what is the next state?
+\begin{itemize}
+\pause
+\item Case 1: the forbidden area is accessible but with penalty. Then,
+$$s_5\xrightarrow{a_2}s_6$$
+
+\pause
+\item Case 2: the forbidden area is inaccessible (e.g., surrounded by a wall)
+$$s_5\xrightarrow{a_2}s_5$$
+\end{itemize}
+\pause
+\begin{itemize}
+\item[-] The lectures consider the first case, which is more general and challenging.
+\item[-] The assignments consider the second case!
+\end{itemize}
+\end{frame}
+%******************************************************************************
+\begin{frame}
+\frametitle{State transition}
+\begin{figure}
+  \centering
+  %\vspace{-30pt}
+  \includegraphics[width=0.2\linewidth]{fig_gridDemoState}
+  %\vspace{10pt}
+\end{figure}
+Tabular representation: We can use a table to describe the state transition:
+%\vspace{-10pt}
+\pause
+\begin{table}[h!]
+\centering
+\resizebox{\columnwidth}{!}{
+\begin{tabular}{c|c|c|c|c|c}
+  % after \\: \hline or \cline{col1-col2} \cline{col3-col4} ...
+  \hline
+   & \blue{$a_1$ (upward)} & \blue{$a_2$ (rightward)} & \blue{$a_3$ (downward)} & \blue{$a_4$ (leftward)} & \blue{$a_5$ (still)} \\
+  \hline
+  \blue{$s_1$} & $s_1$ & $s_2$ & $s_4$ & $s_1$ & $s_1$\\
+  \hline
+  \blue{$s_2$} & $s_2$ & $s_3$ & $s_5$ & $s_1$ & $s_2$\\
+  \hline
+  \blue{$s_3$} & $s_3$ & $s_3$ & $s_6$ & $s_2$ & $s_3$\\
+  \hline
+  \blue{$s_4$} & $s_1$ & $s_5$ & $s_7$ & $s_4$ & $s_4$\\
+  \hline
+  \blue{$s_5$} & $s_2$ & $s_6$ & $s_8$ & $s_4$ & $s_5$\\
+  \hline
+  \blue{$s_6$} & $s_3$ & $s_6$ & $s_9$ & $s_5$ & $s_6$\\
+  \hline
+  \blue{$s_7$} & $s_4$ & $s_8$ & $s_7$ & $s_7$ & $s_7$\\
+  \hline
+  \blue{$s_8$} & $s_5$ & $s_9$ & $s_8$ & $s_7$ & $s_8$\\
+  \hline
+  \blue{$s_9$} & $s_6$ & $s_9$ & $s_9$ & $s_8$ & $s_9$\\
+  \hline
+\end{tabular}
+}
+\end{table}
+\pause
+Can only represent \emph{deterministic} cases.
+\end{frame}
+%******************************************************************************
+\begin{frame}
+\frametitle{State transition}
+\begin{figure}
+  \centering
+  %\vspace{-30pt}
+  \includegraphics[width=0.25\linewidth]{fig_gridDemoState}
+  %\vspace{10pt}
+\end{figure}
+\emph{State transition probability:} use probability to describe state transition!
+
+\begin{itemize}
+\pause
+\item Intuition: In state $s_1$, if we choose action $a_2$, the next state is $s_2$.
+
+\pause
+\item Math:
+\begin{align*}
+p(s_2|s_1,a_2)&=1\\
+p(s_i|s_1,a_2)&=0\quad \forall i\ne 2
+\end{align*}
+\end{itemize}
+
+\pause
+Here it is a \blue{deterministic} case. The state transition could be \blue{stochastic} (for example, wind gust).
+\end{frame}
+%******************************************************************************
+\begin{frame}
+\frametitle{Policy}
+\emph{\blue{Policy}} tells the agent what actions to take in a state.
+
+\visible<2->{
+\textbf{Intuitive representation:} We use \emph{arrows} to describe a policy.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.25\linewidth]{fig_gridDemoPolicy}
+\end{figure}
+}
+
+\visible<3->{
+Based on this policy, we get the following trajectories with different starting points.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.25\linewidth]{fig_gridDemoPolicy_traj1}\quad
+  \includegraphics[width=0.25\linewidth]{fig_gridDemoPolicy_traj2}\quad
+  \includegraphics[width=0.25\linewidth]{fig_gridDemoPolicy_traj3}
+\end{figure}}
+
+\end{frame}
+%******************************************************************************
+\begin{frame}
+\frametitle{Policy}
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.25\linewidth]{fig_gridDemoPolicy}
+\end{figure}
+
+\textbf{Mathematical representation:} using conditional probability
+
+\pause
+For example, for state $s_1$:
+\begin{align*}
+\pi(a_1|s_1)&=0\\
+\pi(a_2|s_1)&=1\\
+\pi(a_3|s_1)&=0\\
+\pi(a_4|s_1)&=0\\
+\pi(a_5|s_1)&=0
+\end{align*}
+
+\pause
+It is a \textcolor{blue}{deterministic} policy.
+
+\end{frame}
+%******************************************************************************
+\begin{frame}
+\frametitle{Policy}
+
+There are \blue{stochastic} policies.
+
+\visible<2->{
+For example:
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.3\linewidth]{fig_gridDemoPolicyStochastic}
+\end{figure}
+}
+
+\visible<3->{
+In this policy, for $s_1$:
+\begin{align*}
+\pi(a_1|s_1)&=0\\
+\pi(a_2|s_1)&=0.5\\
+\pi(a_3|s_1)&=0.5\\
+\pi(a_4|s_1)&=0\\
+\pi(a_5|s_1)&=0
+\end{align*}
+}
+\end{frame}
+%******************************************************************************
+\begin{frame}
+\frametitle{Policy}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.25\linewidth]{fig_gridDemoPolicyStochastic}
+\end{figure}
+
+\textbf{Tabular representation} of a policy: how to use this table.
+\vspace{-10pt}
+\begin{table}[h!]
+\centering
+\resizebox{\columnwidth}{!}{
+\begin{tabular}{c|c|c|c|c|c}
+  % after \\: \hline or \cline{col1-col2} \cline{col3-col4} ...
+  \hline
+   & \blue{$a_1$ (upward)} & \blue{$a_2$ (rightward)} & \blue{$a_3$ (downward)} & \blue{$a_4$ (leftward )} & \blue{$a_5$ (still)} \\
+  \hline
+  \blue{$s_1$} & 0 & 0.5 & 0.5 & 0 & 0 \\
+  \hline
+  \blue{$s_2$} & 0 & 0 & 1 & 0 & 0 \\
+  \hline
+  \blue{$s_3$} & 0 & 0 & 0 & 1 & 0 \\
+  \hline
+  \blue{$s_4$} & 0 & 1 & 0 & 0 & 0 \\
+  \hline
+  \blue{$s_5$} & 0 & 0 & 1 & 0 & 0 \\
+  \hline
+  \blue{$s_6$} & 0 & 0 & 1 & 0 & 0 \\
+  \hline
+  \blue{$s_7$} & 0 & 1 & 0 & 0 & 0 \\
+  \hline
+  \blue{$s_8$} & 0 & 1 & 0 & 0 & 0 \\
+  \hline
+  \blue{$s_9$} & 0 & 0 & 0 & 0 & 1 \\
+  \hline
+\end{tabular}
+}
+\end{table}
+Can represent either \emph{deterministic} or \emph{stochastic} cases.
+
+\end{frame}
+%******************************************************************************
+\begin{frame}
+\frametitle{Reward}
+
+\textbf{Reward is one of the most unique concepts of RL.}
+
+\emph{Reward}: a real number we get after taking an action.
+\begin{itemize}
+\item A \blue{positive} reward represents \blue{encouragement} to take such actions.
+\item A \blue{negative} reward represents \blue{punishment} to take such actions.
+\end{itemize}
+
+\pause
+\vspace{10pt}
+Questions:
+\begin{itemize}
+\item Can positive indicate punishment and negative indicate encouragement?
+\begin{itemize}
+\item[-] Yes.
+\item[-] In this case, reward may be called \emph{cost}.
+\end{itemize}
+\pause
+\item What about a zero reward?
+\begin{itemize}
+\item[-] Relative values matter, not absolute values.
+\item[-] Example: $r=\{+1,-1\}$ becomes $r=\{+2,0\}$ will not change the optimal policy. Details will be shown in the future.
+\end{itemize}
+\end{itemize}
+
+\end{frame}
+%******************************************************************************
+\begin{frame}
+\frametitle{Reward}
+\vspace{-10pt}
+\begin{figure}
+  \centering
+  %\vspace{-30pt}
+  \includegraphics[width=0.25\linewidth]{fig_gridDemoState}
+  %\vspace{10pt}
+\end{figure}
+
+In the grid-world example, the rewards are designed as follows:
+\begin{itemize}
+\item If the agent attempts to get out of the boundary, let $r_{\mathrm{bound}}=-1$
+\item If the agent attempts to enter a forbidden cell, let $r_{\mathrm{forbid}}=-1$
+\item If the agent reaches the target cell, let $r_{\mathrm{target}}=+1$
+\item Otherwise, the agent gets a reward of $r=0$.
+\end{itemize}
+
+\pause
+
+Reward can be interpreted as a \textbf{human-machine interface}, with which we can guide
+the agent to behave as what we expect.
+\begin{itemize}
+\item For example, with the above designed rewards,
+the agent will try to avoid getting out of the boundary or stepping into the forbidden
+cells.
+\end{itemize}
+\end{frame}
+%******************************************************************************
+\begin{frame}
+\frametitle{Reward}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.23\linewidth]{fig_gridDemoState}
+\end{figure}
+
+\textbf{Tabular representation} of \emph{reward transition}: how to use the table?
+\vspace{-10pt}
+\begin{table}[h]
+\centering
+\resizebox{\columnwidth}{!}{
+\begin{tabular}{c|c|c|c|c|c}
+  % after \\: \hline or \cline{col1-col2} \cline{col3-col4} ...
+  \hline
+  & \blue{$a_1$ (upward)} & \blue{$a_2$ (rightward)} & \blue{$a_3$ (downward)} & \blue{$a_4$ (leftward )} & \blue{$a_5$ (still)} \\
+  \hline
+  \blue{$s_1$} & $r_{\mathrm{bound}}$ & 0 & 0 & $r_{\mathrm{bound}}$ & 0\\
+  \hline
+  \blue{$s_2$} & $r_{\mathrm{bound}}$ & 0 & 0 & 0 & 0\\
+  \hline
+  \blue{$s_3$} & $r_{\mathrm{bound}}$ & $r_{\mathrm{bound}}$ & $r_{\mathrm{forbid}}$ & 0 & 0\\
+  \hline
+  \blue{$s_4$} & 0 & 0 & $r_{\mathrm{forbid}}$ & $r_{\mathrm{bound}}$ & 0\\
+  \hline
+  \blue{$s_5$} & 0 & $r_{\mathrm{forbid}}$ & 0 & 0 & 0\\
+  \hline
+  \blue{$s_6$} & 0 & $r_{\mathrm{bound}}$ & $r_{\mathrm{target}}$ & 0 & $r_{\mathrm{forbid}}$\\
+  \hline
+  \blue{$s_7$} & 0 & 0 & $r_{\mathrm{bound}}$ & $r_{\mathrm{bound}}$ & $r_{\mathrm{forbid}}$\\
+  \hline
+  \blue{$s_8$} & 0 & $r_{\mathrm{target}}$ & $r_{\mathrm{bound}}$ & $r_{\mathrm{forbid}}$ & 0\\
+  \hline
+  \blue{$s_9$} & $ r_{\mathrm{forbid}}$ & $r_{\mathrm{bound}}$  & $r_{\mathrm{bound}}$ & 0 & $
+  r_{\mathrm{target}}$\\
+  \hline
+\end{tabular}
+}
+\end{table}
+Can only represent \emph{deterministic} cases.
+\end{frame}
+%******************************************************************************
+\begin{frame}
+\frametitle{Reward}
+\begin{figure}
+  \centering
+  %\vspace{-30pt}
+  \includegraphics[width=0.23\linewidth]{fig_gridDemoState}
+  %\vspace{10pt}
+\end{figure}
+\textbf{Mathematical description}: conditional probability
+
+\begin{itemize}
+\item Intuition: In state $s_1$, if we choose action $a_1$, the reward is $-1$.
+
+\item Math: $p(r=-1|s_1,a_1)=1$ and $p(r\ne-1|s_1,a_1)=0$
+\end{itemize}
+
+\pause
+Remarks:
+\begin{itemize}
+\item Here it is a deterministic case. The reward transition could be stochastic.
+
+For example, if you study hard, you will get rewards. But how much is uncertain.
+
+%\item The reward depends on the state and action, but not the next state (for example, consider $s_1,a_1$ and $s_1,a_5$).
+\end{itemize}
+\end{frame}
+%******************************************************************************
+\begin{frame}
+\frametitle{Trajectory and return}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.3\linewidth]{fig_gridDemoReturnPath1}
+\end{figure}
+
+A \blue{\emph{trajectory}} is a state-action-reward chain:
+\begin{align*}%\label{eq_finiteTrajectoryDemo}
+s_1\xrightarrow[r=0]{a_2}s_2
+\pause
+\xrightarrow[r=0]{a_3} s_5
+\pause
+\xrightarrow[r=0]{a_3} s_8
+\pause
+\xrightarrow[r=1]{a_2} s_9
+\end{align*}
+
+\pause
+The \blue{\emph{return}} of this trajectory is the sum of all the rewards collected along the trajectory:
+\begin{align*}%\label{eq_finiteTrajectoryReturnDemo}
+\mathrm{return}=0+0+0+1=1
+\end{align*}
+
+\end{frame}
+%******************************************************************************
+\begin{frame}
+\frametitle{Trajectory and return}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.3\linewidth]{fig_gridDemoReturnPath2}
+\end{figure}
+
+A different policy gives a different trajectory:
+$$s_1\xrightarrow[r=0]{a_3}s_4 \xrightarrow[r=-1]{a_3} s_7 \xrightarrow[r=0]{a_2} s_8 \xrightarrow[r=+1]{a_2} s_9$$
+
+\pause
+The return of this path is:
+\begin{align*}
+\mathrm{return}=0-1+0+1=0
+\end{align*}
+
+\end{frame}
+%******************************************************************************
+\begin{frame}
+\frametitle{Trajectory and return}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.25\linewidth]{fig_gridDemoReturnPath1}\quad
+  \includegraphics[width=0.25\linewidth]{fig_gridDemoReturnPath2}
+\end{figure}
+
+Which policy is better?
+\begin{itemize}
+\item \textbf{Intuition}: the first is better, because it avoids the forbidden areas.
+\item \textbf{Mathematics}: the first one is better, since it has a greater return!
+
+\pause
+\item Return can be used to evaluate whether a policy is good or not (see details in the next lecture)!
+\end{itemize}
+%What is the ultimate goal of RL? Finding optimal policies! (see details in the next lectures)
+\end{frame}
+%******************************************************************************
+\begin{frame}
+\frametitle{Discounted return}
+\vspace{-20pt}
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.35\linewidth]{fig_gridDemoReturnPath1Infinite}
+\end{figure}
+
+A trajectory may be infinitely long:
+\begin{align*}
+s_1\xrightarrow{a_2}s_2 \xrightarrow{a_3} s_5 \xrightarrow{a_3} s_8 \xrightarrow{a_2} s_9
+\pause
+\textcolor{blue}{\xrightarrow{a_5} s_9 \xrightarrow{a_5} s_9 \dots}
+\end{align*}
+
+\pause
+The return is
+\begin{align*}
+\mathrm{return}
+&=0+0+0+1\pause\blue{+1+1+\dots}\pause=\infty
+\end{align*}
+\pause
+The definition is invalid since the return diverges!
+\end{frame}
+%******************************************************************************
+\begin{frame}
+\frametitle{Discounted return}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.3\linewidth]{fig_gridDemoReturnPath1Infinite}
+\end{figure}
+
+Need to introduce a \blue{\emph{discount rate}} $\gamma\in(0,1)$:
+\begin{align*}%\label{eq_infiniteTrajectoryReturnDemo}
+\blue{\text{discounted return}}
+&=0+\gamma0+\gamma^20+\gamma^31+\gamma^41+\gamma^51+\dots\\
+&=\gamma^3(1+\gamma+\gamma^2+\dots)=\gamma^3\frac{1}{1-\gamma}.
+\end{align*}
+
+Roles: 1) the sum becomes finite; 2) balance the far and near future rewards:
+\begin{itemize}
+\item If $\gamma$ is close to 0, the value of the discounted return is dominated by the rewards obtained in the near future.
+\item If $\gamma$ is close to 1, the value of the discounted return is dominated by the rewards obtained in the far future.
+\end{itemize}
+\end{frame}
+%******************************************************************************
+\begin{frame}
+\frametitle{Episode}
+
+When interacting with the environment following a policy, the agent may stop at some \emph{terminal states}. The resulting trajectory is called an \emph{episode} (or a trial).
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.3\linewidth]{fig_gridDemoReturnPath1}
+\end{figure}
+
+\pause
+Example: episode
+\begin{align*}%\label{eq_finiteTrajectoryDemo}
+s_1\xrightarrow[r=0]{a_2}s_2 \xrightarrow[r=0]{a_3} s_5 \xrightarrow[r=0]{a_3} s_8 \xrightarrow[r=1]{a_2} s_9
+\end{align*}
+
+An episode is usually assumed to be a finite trajectory. Tasks with episodes are called \emph{episodic tasks}.
+
+\end{frame}
+
+%******************************************************************************
+\begin{frame}
+\frametitle{Episode}
+
+Some tasks may have no terminal states, meaning the interaction with the environment will never end. Such tasks are called \emph{continuing tasks}.
+
+\pause
+\vspace{10pt}
+In the grid-world example, should we stop after arriving the target?
+
+\begin{itemize}
+\item \blue{Episodic task + Terminal state}
+\item \blue{Continuing task + Absorbing state:} Treat the target state as a special \emph{absorbing state}, entering which will lead to staying there forever.
+\item \blue{Continuing task + Normal state:} We don't need to distinguish the target state from the others and treat it as a \emph{normal state}. The agent can still leave the target state and gain $r=+1$ when entering the target state.
+    \begin{itemize}
+    \item[-] This is what we use in our course.
+    \end{itemize}
+\end{itemize}
+\end{frame}
+%******************************************************************************
+\begin{frame}
+\frametitle{Markov decision process (MDP)}
+
+Key elements of MDP:
+\begin{itemize}
+\item Sets:
+\begin{itemize}
+\item[-] State: the set of states $\S$
+\item[-] Action: the set of actions $\A(s)$ is associated for state $s\in\S$
+\item[-] Reward: the set of rewards $\mathcal{R}(s,a)$
+\end{itemize}
+\pause
+\item Probability distribution (or called \blue{system model}):
+\begin{itemize}
+\item[-] State transition probability: in state $s$, taking action $a$, the probability to transit to state $s'$ is \blue{$p(s'|s,a)$}
+\item[-] Reward probability: in state $s$, taking action $a$, the probability to get reward $r$ is \blue{$p(r|s,a)$}
+\end{itemize}
+\pause
+\item Policy: in state $s$, the probability to choose action $a$ is $\pi(a|s)$
+\pause
+\item
+\emph{Markov property}: memoryless property
+\begin{align*}%\label{eq_MarkovPropertyDemo}
+p(s_{t+1}|a_{t},s_t,\dots,a_0,s_0)&=p(s_{t+1}|a_{t},s_t),\nonumber\\
+p(r_{t+1}|a_{t},s_t,\dots,a_0,s_0)&=p(r_{t+1}|a_{t},s_t).
+\end{align*}
+
+\end{itemize}
+
+\pause
+All the concepts introduced in this lecture can be put in the framework in MDP.
+\end{frame}
+%******************************************************************************
+\begin{frame}
+\frametitle{Markov decision process (MDP)}
+
+The grid world could be abstracted as a more general model, \textcolor{blue}{\emph{Markov process}}.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.25\linewidth]{fig_gridDemoPolicyStochastic}\qquad
+  \includegraphics[width=0.3\linewidth]{fig_MPDemo}
+\end{figure}
+
+The circles represent states and the links with arrows represent the state transition.
+
+\end{frame}
+%%******************************************************************************
+\begin{frame}
+\frametitle{Summary}
+By using grid-world examples, we demonstrated the following key concepts:
+\begin{itemize}
+\item State
+
+\item Action
+
+\item State transition, state transition probability $p(s'|s,a)$
+
+\item Reward, reward probability $p(r|s,a)$
+
+\item Trajectory, episode, return, discounted return
+
+\item Markov decision process
+\end{itemize}
+
+
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%\bibliographystyle{plainnat}
+%\bibliography{myOwnPub,zsyReferenceAll}
+\end{document}

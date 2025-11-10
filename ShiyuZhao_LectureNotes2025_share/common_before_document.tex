@@ -1,0 +1,190 @@
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[font=footnotesize]{caption} % set the captain font size to 8 (i.e. footnotesize)
+\usepackage{subfig} % uses subfloats within a single float MUST after the package {caption}!!
+\usepackage{natbib}
+%\usepackage{cite} % sort the reference in the article by number or alphabatic
+\usepackage{color}
+\usepackage{algorithm} % options: boxed [section]
+\usepackage{algpseudocode} % for algorithm
+%\usepackage{enumerate}
+\usepackage{enumitem} % directly use itemize, easily specify indent and everything
+\setlist[itemize]{leftmargin=*,label=$\bullet$}%leftmargin=*,itemsep=0pt} %topsep=5pt
+\setlist[enumerate]{label={\arabic*)}}
+\usepackage{hyperref}
+\usepackage{wrapfig}
+\usepackage{textpos}
+\usepackage{bibentry} % for publication list
+\makeatletter\let\saved@bibitem\@bibitem\makeatother % make hyperref and bibentry compatible!!!
+\nobibliography*
+\usepackage{fancybox}% shadow for image
+%\usepackage{empheq} % emphasize equations
+\usepackage{bm}
+\usepackage{arydshln} % for dashline in table or matrix
+\linespread{1.3}
+\usepackage{multimedia}
+
+\usepackage{setspace} \setstretch{1.2}
+
+\usepackage{framed}
+\colorlet{shadecolor}{black!5}
+% for box, page breakable, very good!!
+\usepackage[framemethod=TikZ]{mdframed}%
+\mdfdefinestyle{myFrame}{%
+    linecolor=gray!15!white,%gray
+    outerlinewidth=0.1pt,
+    roundcorner=3pt,
+    skipabove=15pt, % the space before the entire box
+    skipbelow=15pt, % the space after the entire box. Please see the figure 2 in the manual, very clear!
+    innertopmargin=10pt,%\baselineskip,
+    innerbottommargin=10pt,%\baselineskip,
+    %innerrightmargin=10pt,
+    %innerleftmargin=10pt,
+    splittopskip=\baselineskip,
+    splitbottomskip=\baselineskip,
+    backgroundcolor=gray!10!white,
+    frametitlerule=true,
+    frametitlebackgroundcolor=gray!20!white,
+    frametitleaboveskip=5pt,
+    frametitlebelowskip=5pt,
+}
+\mdfdefinestyle{myAlgo}{%
+    linecolor=gray!100!white,%gray
+    outerlinewidth=0.1pt,
+    roundcorner=3pt,
+    skipabove=15pt, % the space before the entire box
+    skipbelow=15pt, % the space after the entire box. Please see the figure 2 in the manual, very clear!
+    innertopmargin=10pt,%\baselineskip,
+    innerbottommargin=10pt,%\baselineskip,
+    %innerrightmargin=10pt,
+    %innerleftmargin=10pt,
+    splittopskip=\baselineskip,
+    splitbottomskip=\baselineskip,
+    backgroundcolor=gray!0!white,
+    frametitlerule=true,
+    frametitlebackgroundcolor=gray!20!white,
+    frametitleaboveskip=5pt,
+    frametitlebelowskip=5pt,
+}
+
+
+\usepackage{tikz}
+\usetikzlibrary{calc} % for calculation functions in Tikz let, in commands in Tikz
+\usetikzlibrary{shapes} % for block diagram
+\usetikzlibrary{chains}
+\usetikzlibrary{fit}
+\usetikzlibrary{arrows}
+\usetikzlibrary{decorations.text} % text along path
+
+\newcommand{\blue}[1]{\textcolor{blue}{#1}}
+\definecolor{myred}{RGB}{200,0,0}
+\newcommand{\red}[1]{\textcolor{myred}{#1}} %magenta purple
+\newcommand{\I}{\mathcal{I}}
+\newcommand{\tr}{\mathrm{tr}}
+\newcommand{\Null}{\mathrm{Null}}
+\newcommand{\Range}{\mathrm{Range}}
+\newcommand{\one}{\mathbf{1}}
+\newcommand{\rank}{\mathrm{rank}}
+\newcommand{\myspan}{\mathrm{span}}
+\newcommand{\mydiag}{\mathrm{diag}}
+\newcommand{\D}{\mathrm{d}}
+\renewcommand{\d}{\mathrm{d}}
+\newcommand{\blkdiag}{\mathrm{blkdiag}}
+\newcommand{\sgn}{\mathrm{sgn}}
+\newcommand{\T}{\mathrm{T}}
+\newcommand{\myqed}{\hfill$\blacksquare$}
+\newcommand{\ep}{\varepsilon}
+\newcommand{\sig}{\mathrm{sig}_a}
+%\newcommand{\sigep_}[1]{\sig(\ep_{#1})}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\A}{\mathcal{A}}
+\newcommand{\G}{\mathcal{G}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\X}{\mathcal{X}}
+\newcommand{\V}{\mathcal{V}}
+\newcommand{\N}{\mathcal{N}}
+\newcommand{\M}{\mathcal{M}}
+\renewcommand{\H}{\mathcal{H}}
+\renewcommand{\L}{\mathcal{B}}
+\renewcommand{\S}{\mathcal{S}}
+\newcommand{\xe}{x_{\text{e}}}
+%\newcommand{\Null}[1]{\mathrm{Null}\left(#1\right)}
+\newcommand{\sk}[1]{\left[#1\right]_\times} % skew symmetric operator
+\newcommand{\dia}[1]{\mathrm{diag}\left(#1\right)} % block diagnal matrix
+%\renewcommand{\span}[1]{\mathrm{span}\left\{#1\right\}} % ERROR when redefine \span
+\newcommand{\Var}{\mathrm{Var}}
+\newcommand{\var}{\mathrm{var}}
+
+
+\graphicspath{{figures/}}
+
+% for tikz, theorem, lemma ... environments have already been declared. You don't need to declare, or you need to use other names than theorem or lemma, such as my_theorem.
+%\newtheorem{my_theorem}{Theorem}
+%\newtheorem{my_lemma}{Lemma}
+\newtheorem{assumption}{Assumption} % necessary for beamer
+%\newtheorem{my_remark}{Remark}
+\newtheorem{proposition}{Proposition} % necessary for beamer
+%\newtheorem{my_corollary}{Corollary}
+%\newtheorem{my_example}{Example}
+%\newtheorem{my_definition}{Definition}
+%\newtheorem{my_problem}{Problem}
+
+%##################################################
+\newcommand{\pagetitle}[1]{\textbf{\textcolor{BlueViolet}{$\circ$ #1}}} %!!!
+\newcommand{\pagehighlight}[1]{\textbf{\textcolor{Brown}{#1}}} %!!!
+\newcommand{\mypause}{\pause} % this is useful for slide show. if you don't want pause any more, just set it as blank
+%\newcommand{\mybullet}{\textcolor{BlueViolet}{$\blacksquare$} }%{$\rhd$ }
+%\newcommand{\myhighsign}{$\star$ }% the sign to highlight a sentence
+
+%##################################################
+% To highlight equation. Example: \begin{align*} \boxed{xxx} \end{align*}
+% does not support multiline equations
+% put color to \boxed math command
+\newcommand*{\boxcolor}{gray}
+\makeatletter
+\renewcommand{\boxed}[1]{\textcolor{\boxcolor}{%
+%\tikz[baseline={([yshift=-1ex]current bounding box.center)}] \node [rectangle, minimum width=1ex,rounded corners,draw] {\normalcolor\m@th$\displaystyle#1$};}}
+\tikz[baseline={([yshift=-1ex]current bounding box.center)}] \node [rectangle, minimum width=2ex,rounded corners,draw] {\normalcolor\m@th$\displaystyle#1$};}}
+\makeatother
+
+%##################################################
+% set my own theme
+\def\structureHeight{9mm}
+\usetheme[height=\structureHeight]{Rochester}
+\usecolortheme[RGB={0,0,128}]{structure}
+\setbeamertemplate{items}[circle]%rectangle, triangle,circle
+\setbeamertemplate{blocks}[rounded][shadow=true]
+\setbeamertemplate{navigation symbols}{}
+%\addtobeamertemplate{frametitle}{} % specify the logo
+%{
+%    \begin{textblock*}{100mm}(.87\textwidth,-\structureHeight)
+%        \includegraphics[height=6.6mm,width=3cm,keepaspectratio]{../common_figures_private/westlake_logo.png} % add logo
+%    \end{textblock*}
+%}
+\addtobeamertemplate{frametitle}{\vskip4pt}{} % specify
+%\setbeamerfont{frametitle}{size=\large}
+\definecolor{mylightgray}{RGB}{240 240 240}
+\definecolor{mykhaki}{RGB}{240 230 140}% khaki color
+\definecolor{mylightYellow}{RGB}{255,255,224} % light yellow
+%\setbeamercolor{beamercolor1}{bg=mylightgray, fg=black}
+%\setbeamercolor{beamercolor2}{bg=mylightYellow,fg=black}%{bg=yellow!90!white, fg=black}
+% background and foreground color
+\setbeamercolor{background canvas}{bg=black!0!white} % background color of every slide! My previous value was black!10!white for my lecture videos!
+\setbeamercolor{normal text}{bg=black!10!white} % background color for e.g. theorem environment. When canvas is 10, here it can be 20; the bg for normal text changes the color of hidden text when you use overlay
+
+\setbeamercolor{block title}{bg=mykhaki,fg=black}
+\defbeamertemplate{footline}{zsy_frameNumber}
+{%
+  \hspace{5pt}  \emph{Shiyu Zhao}
+  \hspace*{\fill}%
+  \usebeamercolor[fg]{page number in head/foot}%
+  \insertframenumber\,/\,\inserttotalframenumber \vspace{0pt} \hspace{5pt}
+  \vskip5pt
+}
+\setbeamertemplate{footline}[zsy_frameNumber]
+%##################################################
+\setbeamercovered{transparent=0} % a good value for transparent text is 20
+% when using the overlay commands like \onslide or \uncover, the text will NOT be invisible, instead it will be like transparent
+%\pause will also have the transparent effect: command \pause is easy to use: to make it invisible, change the value to zero.
+

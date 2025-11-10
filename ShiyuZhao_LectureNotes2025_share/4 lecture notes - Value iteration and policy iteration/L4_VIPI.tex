@@ -1,0 +1,1166 @@
+\documentclass[xcolor=dvipsnames,mathserif,9pt]{beamer} %handout
+%\usefonttheme{serif}%{structurebold}%{structuresmallcapsserif}%{serif}
+
+%\input{before_document}
+\input{../common_before_document}
+
+\usepackage{multimedia}
+\linespread{1.3}
+\newcommand{\hl}{$\triangleright$ }
+%\newcommand{\blue}[1]{\textcolor{blue}{#1}}
+%\newcommand{\red}[1]{\textcolor{red}{#1}}
+
+\begin{document}
+
+\input{title_page}
+
+%------------------------------------------
+\begin{frame}
+\frametitle{Outline}
+\begin{figure}[h]
+  \centering
+\includegraphics[width=0.8\linewidth]{Figure_chapterRelationship.pdf}
+\end{figure}
+\end{frame}
+%------------------------------------------
+
+\begin{frame}
+\frametitle{Outline}
+\tableofcontents
+\end{frame}
+\AtBeginSection[]% put it to the start of each section
+{
+  \begin{frame}
+    \frametitle{Outline}
+    \tableofcontents[currentsection]
+  \end{frame}
+}
+%%--------------------------------------
+%\AtBeginSection[]% put it to the start of each section
+%{
+%  \begin{frame}
+%    \frametitle{Outline}
+%    \tableofcontents[currentsection]
+%  \end{frame}
+%}
+%\section{Revisit the last lecture}
+%%--------------------------------------
+%\begin{frame}
+%\frametitle{Revisit}
+%\begin{definition}[Optimal policy]
+%A policy $\pi^*$ is optimal if $v_{\pi^*}(s)\ge v_{\pi}(s)$ for all $s$ and for any other policy $\pi$.
+%\end{definition}
+%\pause
+%\hl Why we care about optimal policies? RL's aim is to find optimal policies!!
+%
+%\pause
+%\hl Questions we asked:
+%\begin{itemize}
+%\item Does the optimal policy exist?
+%\item Is the optimal policy unique?
+%\item How to obtain the optimal policy?
+%\item Is the optimal policy stochastic or deterministic?
+%\end{itemize}
+%\hl With the Bellman optimality equation, we are able to answer these questions.
+%
+%\end{frame}
+%%--------------------------------------
+%\begin{frame}
+%\frametitle{Revisit}
+%
+%The Bellman optimality equation is
+%\begin{align*}
+%v=\max_{\pi}(r_\pi+\gamma  P_\pi v)
+%\end{align*}
+%
+%\pause
+%Based on the \textcolor[rgb]{0.00,0.07,1.00}{contraction mapping theorem}, we have the following results.
+%\begin{itemize}
+%\item \emph{Existence and Uniqueness}: exist a unique solution $v^*$
+%\begin{align*}
+%v^*=\max_{\pi}(r_\pi+\gamma  P_\pi v^*)
+%\end{align*}
+%\item \emph{Optimal policy}: The policy
+%\begin{align*}
+%\pi^*=\arg\max_{\pi}(r_\pi+\gamma  P_\pi v^*)
+%\end{align*}
+%leads to
+%\begin{align*}
+%v^*=r_{\pi^*}+\gamma  P_{\pi^*} v^*
+%\end{align*}
+%Hence the state value of $\pi^*$ is $v_{\pi^*}=v^*$.
+%\item \emph{Optimality}: $\pi^*$ is optimal because $v_{\pi^*}\ge v_\pi$ for any $\pi$.
+%\end{itemize}
+%\end{frame}
+%--------------------------------------
+\AtBeginSection[]% put it to the start of each section
+{
+  \begin{frame}
+    \frametitle{Outline}
+    \tableofcontents[currentsection]
+  \end{frame}
+}
+\section{Value iteration algorithm}
+\begin{frame}
+\frametitle{Value iteration algorithm}
+
+\hl How to solve the Bellman optimality equation?
+$$v=f(v)=\max_\pi (r_\pi+\gamma P_{\pi}v)$$
+
+\pause
+\hl The \textbf{contraction mapping theorem} suggests an iterative algorithm:
+$$v_{k+1}=f(v_k)=\max_\pi(r_\pi+\gamma  P_\pi v_k),\quad k=0,1,2,3\dots$$
+where $v_0$ can be arbitrary.
+This algorithm can eventually find the optimal state value and an optimal policy.
+
+\vspace{10pt}
+\pause
+\hl This algorithm is called the \blue{value iteration} algorithm!
+
+\hl We next study the \textbf{implementation details} of this algorithm.
+\end{frame}
+%--------------------------------------
+\begin{frame}
+\frametitle{Value iteration algorithm}
+
+The algorithm (matrix-vector form)
+$$v_{k+1}= f(v_k)=\max_\pi(r_\pi+\gamma  P_\pi v_k),\quad k=0,1,2,3\dots$$
+can be decomposed to two steps.
+\pause
+\begin{itemize}
+\item \blue{Step 1: policy update.} This step is to solve $$\pi_{k+1}=\arg\max_\pi (r_\pi +\gamma  P_\pi v_k)$$
+where $v_k$ is given.
+\pause
+\item \blue{Step 2: value update.} This step is to compute the following equation:
+$$v_{k+1}=r_{\pi_{k+1}} +\gamma  P_{\pi_{k+1}} v_k$$
+\end{itemize}
+\pause
+\textbf{Question:} is $v_k$ a state value?
+
+\textbf{Answer:} No, because $v_k$ may not satisfy any Bellman equation.
+\end{frame}
+%--------------------------------------
+\begin{frame}
+\frametitle{Value iteration algorithm}
+
+\hl We next study the elementwise form in order to implement the algorithm.
+
+\begin{itemize}
+\item Matrix-vector form is useful for \textbf{theoretical analysis}.
+
+\item Elementwise form is useful for \textbf{implementation}.
+\end{itemize}
+\end{frame}
+%--------------------------------------
+\begin{frame}
+\frametitle{Value iteration algorithm - Elementwise form}
+
+\hl \blue{Step 1: Policy update}
+
+The elementwise form of
+$$\pi_{k+1}=\arg\max_\pi (r_\pi +\gamma  P_\pi v_k)$$
+is
+{\small
+\begin{align*}
+\pi_{k+1}\blue{(s)}=\arg\max_\pi \sum_{a}{\pi(a|s)}\underbrace{\left(\sum_{r}p(r|s,a)r + \gamma \sum_{s'}p(s'|s,a)\red{v_k(s')}\right)}_{\red{q_k(s,a)}},\quad s\in\mathcal{S}
+\end{align*}
+}
+
+\pause
+The optimal policy solving the above optimization problem is
+\begin{align*}%\label{eq_optimalPolicyDeterministic}
+\blue{\pi_{k+1}(a|s)=
+\left\{
+  \begin{array}{ll}
+   1 & a=a^*_k(s) \\
+   0 & a\ne a^*_k(s) \\
+  \end{array}
+\right.}
+\end{align*}
+where $\blue{a^*_k(s)=\arg\max_a q_k(a,s)}$.
+$\pi_{k+1}$ is called a \textbf{greedy policy}, since it simply selects the greatest q-value.
+
+\end{frame}
+%--------------------------------------
+\begin{frame}
+\frametitle{Value iteration algorithm - Elementwise form}
+
+\hl \blue{Step 2: Value update}
+
+The elementwise form of
+$$v_{k+1}=r_{\pi_{k+1}} +\gamma  P_{\pi_{k+1}} v_k$$
+is
+\begin{align*}
+v_{k+1}(s)=\sum_{a}\red{\pi_{k+1}(a|s)}\underbrace{\left(\sum_{r}p(r|s,a)r + \gamma \sum_{s'}p(s'|s,a)\red{v_k(s')}\right)}_{\red{q_k(s,a)}},\quad s\in\mathcal{S}
+\end{align*}
+
+\pause
+Since $\pi_{k+1}$ is greedy, the above equation is simply
+\begin{align*}
+\blue{v_{k+1}(s)=\max_a q_k(a,s)}
+\end{align*}
+
+\end{frame}
+%--------------------------------------
+\begin{frame}
+\frametitle{Value iteration algorithm - Pseudocode}
+%\vspace{-10pt}
+\hl Procedure summary:
+\begin{align*}
+{\small\blue{
+v_k(s)\rightarrow q_k(s,a) \rightarrow \text{greedy policy } \pi_{k+1}(a|s) \rightarrow \text{new value } v_{k+1}=\max_a q_k(s,a)}}
+\end{align*}
+
+\pause
+
+\begin{figure}[t]
+{\small
+\begin{mdframed}[style=myAlgo,nobreak=true,frametitle={Pseudocode: Value iteration algorithm}]
+{\fontfamily{cmss}\selectfont
+\textbf{Initialization:} The probability models $p(r|s,a)$ and $p(s'|s,a)$ for all $(s,a)$ are known. Initial guess $v_0$.
+
+\textbf{Aim:} Search for the optimal state value and an optimal policy by solving the Bellman optimality equation.
+
+\vspace{5pt}
+While $v_k$ has not converged in the sense that $\|v_k-v_{k-1}\|$ is greater than a predefined small threshold, for the $k$th iteration, do
+
+\qquad For every state $s\in\S$, do
+
+\qquad\qquad For every action $a\in\A(s)$, do
+
+\qquad\qquad\qquad q-value: $q_k(s,a)=\sum_{r}p(r|s,a)r + \gamma \sum_{s'}p(s'|s,a)v_k(s')$
+
+\qquad\qquad Maximum action value: $a^*_k(s)=\arg\max_a q_k(a,s)$
+
+\qquad\qquad \emph{Policy update:} $\pi_{k+1}(a|s)=1$ if $a=a^*_k$, and $\pi_{k+1}(a|s)=0$ otherwise
+
+\qquad\qquad \emph{Value update:} $v_{k+1}(s)=\max_a q_k(a,s)$
+}%\fontfamily
+\end{mdframed}}
+\end{figure}
+
+\end{frame}
+
+%
+%%--------------------------------------
+%\begin{frame}
+%\frametitle{Example}
+%
+%\begin{figure}[h]
+%  \centering
+%  \includegraphics[width=0.4\linewidth]{fig_1D3Grid}
+%\end{figure}
+%
+% Example: Manually solve the BOE.
+%
+%\begin{itemize}
+%\item Why manually? Can understand better.
+%\item Why so simple example? Can be calculated manually.
+%\end{itemize}
+%
+%Actions: $a_\ell, a_0, a_r$ represent go left, stay unchanged, and go right.
+%
+%Reward: entering the target area: +1; try to go out of boundary -1.
+%
+%\end{frame}
+%
+%%--------------------------------------
+%\begin{frame}
+%\frametitle{Example}
+%\begin{figure}[h]
+%  \centering
+%  \includegraphics[width=0.4\linewidth]{fig_1D3Grid}
+%\end{figure}
+%
+%\pause
+% The values of $q(s,a)$
+%\begin{table}[h]
+%\centering
+%%\resizebox{0.8\columnwidth}{!}{
+%\begin{tabular}{|c|c|c|c|}%{|c|p{2cm}|p{2cm}|p{2cm}|}
+%  % after \\: \hline or \cline{col1-col2} \cline{col3-col4} ...
+%  \hline
+%  q-value table & \blue{$a_\ell$} & \blue{$a_0$} & \blue{$a_r$} \\
+%  \hline
+%  \blue{$s_1$} & $-1+\gamma v(s_1)$ & $0+\gamma v(s_1)$ & $1+\gamma v(s_2)$\\
+%  \hline
+%  \blue{$s_2$} & $0+\gamma v(s_1)$ & $1+\gamma v(s_2)$ & $0+\gamma v(s_3)$\\
+%  \hline
+%  \blue{$s_3$} & $1+\gamma v(s_2)$ & $0+\gamma v(s_3)$ & $-1+\gamma v(s_3)$\\
+%  \hline
+%\end{tabular}
+%%}
+%%\caption{The value of $q(a,s)$}
+%\end{table}
+%Consider $\gamma=0.9$
+%
+%%\pause
+%% Question: is this action value? Very similar but not, because $v$ is not state value. We call it q-value.
+%
+%\end{frame}
+%%--------------------------------------
+%\begin{frame}
+%\frametitle{Example}
+% Our objective is to find $v^*(s_i)$ and $\pi^*$
+%
+%\pause
+% $k=0$:
+%
+%v-value: select $v_0(s_1)=v_0(s_2)=v_0(s_3)=0$
+%
+%q-value (using the previous table):
+%\begin{table}[h]
+%\centering
+%%\resizebox{0.8\columnwidth}{!}{
+%\begin{tabular}{|c|c|c|c|}%{|c|p{2cm}|p{2cm}|p{2cm}|}
+%  % after \\: \hline or \cline{col1-col2} \cline{col3-col4} ...
+%  \hline
+%   & \blue{$a_\ell$} & \blue{$a_0$} & \blue{$a_r$} \\
+%  \hline
+%  \blue{$s_1$} & $-1$ & $0$ & $1$\\
+%  \hline
+%  \blue{$s_2$} & $0$ & $1$ & $0$\\
+%  \hline
+%  \blue{$s_3$} & $1$ & $0$ & $-1$\\
+%  \hline
+%\end{tabular}
+%%}
+%%\caption{The value of $q(a,s)$ at $k=0$}
+%\end{table}
+%\pause
+%Greedy policy (select the greatest q-value)
+%\begin{align*}
+%\pi(a_r|s_1)=1,\quad \pi(a_0|s_2)=1,\quad \pi(a_\ell|s_3)=1
+%\end{align*}
+%v-value: $v_{1}(s)=\max_a q_0(s,a)$
+%$$v_1(s_1)=v_1(s_2)=v_1(s_3)=1$$
+%
+%This this policy good? Yes!
+%\end{frame}
+%%--------------------------------------
+%\begin{frame}
+%\frametitle{Example}
+%
+%\begin{itemize}
+%
+%\item $k=1$:
+%
+%Excise: With $v_1(s)$ calculated in the last step, calculate by yourself.
+%\pause
+%q-value:
+%\begin{table}[h!]
+%\centering
+%%\resizebox{0.5\columnwidth}{!}{
+%\begin{tabular}{|c|c|c|c|}%{|c|p{2cm}|p{2cm}|p{2cm}|}
+%  % after \\: \hline or \cline{col1-col2} \cline{col3-col4} ...
+%  \hline
+%   & \blue{$a_\ell$} & \blue{$a_0$} & \blue{$a_r$} \\
+%  \hline
+%  \blue{$s_1$} & $-0.1$ & $0.9$ & $1.9$\\
+%  \hline
+%  \blue{$s_2$} & $0.9$ & $1.9$ & $0.9$\\
+%  \hline
+%  \blue{$s_3$} & $1.9$ & $0.9$ & $-0.1$\\
+%  \hline
+%\end{tabular}
+%%}
+%%\caption{The value of $q(a,s)$ at $k=1$}
+%\end{table}
+%\pause
+%Greedy policy (select the greatest q-value):
+%\begin{align*}
+%\pi(a_r|s_1)=1,\quad \pi(a_0|s_2)=1,\quad \pi(a_\ell|s_3)=1
+%\end{align*}
+%The policy is the same as the previous one, which is already optimal.
+%
+%v-value: $v_2(s)=...$
+%\item $k=2,3,\dots$
+%\end{itemize}
+%\end{frame}
+
+%--------------------------------------
+\begin{frame}
+\frametitle{Value iteration algorithm - Example}
+
+\hl The reward setting is $r_{\rm boundary}=r_{\rm forbidden}=-1$, $r_{\rm target}=1$. The discount rate is $\gamma=0.9$.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.7\linewidth]{fig_ValueIterationDemoGridExample}
+  %\caption{An example to demonstrate the implementation of the value iteration algorithm.}
+  %\label{figChapterVIPI_demoVI}
+\end{figure}
+
+\pause
+q-table: The expression of $q(s,a)=\sum_{r}p(r|s,a)r + \gamma \sum_{s'}p(s'|s,a)\red{v_k(s')}$:
+\begin{table}[t]
+\centering
+\resizebox{\columnwidth}{!}{
+\begin{tabular}{|c|c|c|c|c|c|}
+  % after \\: \hline or \cline{col1-col2} \cline{col3-col4} ...
+  \hline
+  q-value & \blue{$a_1$} & \blue{$a_2$} & \blue{$a_3$} & \blue{$a_4$} & \blue{$a_5$} \\
+  \hline
+  \blue{$s_1$} & $-1+\gamma v(s_1)$ & $-1+\gamma v(s_2)$ & $0+\gamma v(s_3)$ & $-1+\gamma v(s_1)$ & $0+\gamma v(s_1)$\\
+  \hline
+  \blue{$s_2$} & $-1+\gamma v(s_2)$ & $-1+\gamma v(s_2)$ & $1+\gamma v(s_4)$ & $0+\gamma v(s_1)$ & $-1+\gamma v(s_2)$\\
+  \hline
+  \blue{$s_3$} & $0+\gamma v(s_1)$ & $1+\gamma v(s_4)$ & $-1+\gamma v(s_3)$ & $-1+\gamma v(s_3)$ & $0+\gamma v(s_3)$\\
+  \hline
+  \blue{$s_4$} & $-1+\gamma v(s_2)$ & $-1+\gamma v(s_4)$ & $-1+\gamma v(s_4)$ & $0+\gamma v(s_3)$ & $1+\gamma v(s_4)$\\
+  \hline
+\end{tabular}
+}
+%\caption{The expression of $q(s,a)$.}
+%\label{table_qvalueExpressionForDemoVI}
+\end{table}
+
+\end{frame}
+%--------------------------------------
+\begin{frame}
+\frametitle{Value iteration algorithm - Example}
+
+\begin{itemize}
+\item $k=0$: let $v_0(s_1)=v_0(s_2)=v_0(s_3)=v_0(s_4)=0$
+{\small
+\begin{table}[t!]
+\centering
+%\resizebox{0.9\columnwidth}{!}{
+\begin{tabular}{|c|c|c|c|c|c|}
+  % after \\: \hline or \cline{col1-col2} \cline{col3-col4} ...
+  \hline
+  q-value & \blue{$a_1$} & \blue{$a_2$} & \blue{$a_3$} & \blue{$a_4$} & \blue{$a_5$} \\
+  \hline
+  \blue{$s_1$} & $-1$ & $-1$ & $\red{0}$ & $-1$ & $\red{0}$\\
+  \hline
+  \blue{$s_2$} & $-1$ & $-1$ & $\red{1}$ & $0$ & $-1$\\
+  \hline
+  \blue{$s_3$} & $0$ & $\red{1}$ & $-1$ & $-1$ & $0$\\
+  \hline
+  \blue{$s_4$} & $-1$ & $-1$ & $-1$ & $0$ & $\red{1}$\\
+  \hline
+\end{tabular}
+%}
+\end{table}
+}
+
+\pause
+\blue{Step 1: Policy update:}
+\begin{align*}
+\pi_1(a_5|s_1)=1, \quad  \pi_1(a_3|s_2)=1, \quad \pi_1(a_2|s_3)=1, \quad \pi_1(a_5|s_4)=1
+\end{align*}
+
+\pause
+\blue{Step 2: Value update:}
+$$v_1(s_1)=0, \quad v_1(s_2)=1, \quad v_1(s_3)=1, \quad v_1(s_4)=1$$
+
+This policy is visualized in Figure (b).
+\end{itemize}
+
+\end{frame}
+%--------------------------------------
+\begin{frame}
+\frametitle{Value iteration algorithm - Example}
+\begin{itemize}
+\item $k=1$: since $v_1(s_1)=0, v_1(s_2)=1, v_1(s_3)=1, v_1(s_4)=1$, we have
+
+\pause
+
+\begin{table}[h!]
+\centering
+\resizebox{0.8\columnwidth}{!}{
+\begin{tabular}{|c|c|c|c|c|c|}
+  % after \\: \hline or \cline{col1-col2} \cline{col3-col4} ...
+  \hline
+  q-table & \blue{$a_1$} & \blue{$a_2$} & \blue{$a_3$} & \blue{$a_4$} & \blue{$a_5$} \\
+  \hline
+  \blue{$s_1$} & $-1+\gamma0$ & $-1+\gamma 1$ & $\red{0+\gamma 1}$ & $-1+\gamma 0$ & $0+\gamma 0$\\
+  \hline
+  \blue{$s_2$} & $-1+\gamma 1$ & $-1+\gamma 1$ & $\red{1+\gamma 1}$ & $0+\gamma 0$ & $-1+\gamma 1$\\
+  \hline
+  \blue{$s_3$} & $0+\gamma 0$ & $\red{1+\gamma 1}$ & $-1+\gamma 1$ & $-1+\gamma 1$ & $0+\gamma 1$\\
+  \hline
+  \blue{$s_4$} & $-1+\gamma 1$ & $-1+\gamma 1$ & $-1+\gamma 1$ & $0+\gamma 1$ & $\red{1+\gamma 1}$\\
+  \hline
+\end{tabular}
+}
+%\caption{The value of $q(a,s)$ at $k=1$}
+\end{table}
+
+\pause
+\blue{Step 1: Policy update:}
+\vspace{-5pt}
+$$\pi_2(a_3|s_1)=1, \ \pi_2(a_3|s_2)=1, \ \pi_2(a_2|s_3)=1, \ \pi_2(a_5|s_4)=1.$$
+
+\pause
+\blue{Step 2: Value update:}
+\vspace{-5pt}
+$$v_2(s_1)=\gamma1, \ v_2(s_2)=1+\gamma1, \ v_2(s_3)=1+\gamma1, \ v_2(s_4)=1+\gamma1.$$
+This policy is visualized in Figure (c).
+The policy is already optimal!!
+\pause
+\item $k=2,3,\dots$. Stop when $\|v_k-v_{k+1}\|$ is smaller than a predefined threshold.
+\end{itemize}
+\end{frame}
+%--------------------------------------
+\AtBeginSection[]% put it to the start of each section
+{
+  \begin{frame}
+    \frametitle{Outline}
+    \tableofcontents[currentsection]
+  \end{frame}
+}
+\section{Policy iteration algorithm}
+\begin{frame}
+\frametitle{Policy iteration algorithm}
+
+\hl Algorithm description:
+
+Given a random \blue{initial policy} $\pi_0$,
+
+\pause
+\begin{itemize}
+\item \blue{Step 1: policy evaluation (PE)}
+
+This step is to calculate the state value of $\pi_k$:
+$$v_{\pi_k}=r_{\pi_k}+\gamma  P_{\pi_k} v_{\pi_k}$$
+Note that $v_{\pi_k}$ is a state value function.
+\pause
+\item \blue{Step 2: policy improvement (PI)}
+\begin{align*}
+\pi_{k+1}=\arg\max_{\pi} (r_\pi +\gamma  P_\pi v_{\pi_k})
+\end{align*}
+The maximization is componentwise!
+\end{itemize}
+
+\pause
+Similar to the value iteration algorithm? Be patient. We will compare them later.
+\end{frame}
+%--------------------------------------
+\begin{frame}
+\frametitle{Policy iteration algorithm}
+\hl The algorithm leads to a sequence:
+$$\pi_0\xrightarrow{PE} v_{\pi_0}\xrightarrow{PI} \pi_1 \xrightarrow{PE} v_{\pi_1}\xrightarrow{PI} \pi_2 \xrightarrow{PE} v_{\pi_2}\xrightarrow{PI} \dots$$
+PE=policy evaluation, PI=policy improvement
+
+\pause
+\vspace{10pt}
+\hl Questions:
+\begin{itemize}
+\item Q1: In the policy evaluation step, how to get the state value $v_{\pi_k}$ by solving the Bellman equation?
+\pause
+\item Q2: In the policy improvement step, why is the new policy $\pi_{k+1}$ better than $\pi_k$?
+\pause
+\item Q3: Why can such an iterative algorithm finally reach an optimal policy?
+\pause
+\item Q4: What is the relationship between this policy iteration algorithm and the previous value iteration algorithm?
+\end{itemize}
+
+
+\end{frame}
+%--------------------------------------
+\begin{frame}
+\frametitle{Policy iteration algorithm}
+
+\hl \red{Q1: In the policy evaluation step, how to get the state value $v_{\pi_k}$ by solving the Bellman equation?}
+$$v_{\pi_k}=r_{\pi_k}+\gamma  P_{\pi_k} v_{\pi_k}$$
+\vspace{-20pt}
+\pause
+\begin{itemize}
+\item Closed-form solution:
+$$v_{\pi_k}=(I-\gamma P_{\pi_k})^{-1}r_{\pi_k}$$
+
+\item Iterative solution:
+\begin{align*}%\label{eq_iterativeAlgoPEStepofPI}
+v_{\pi_k}^{(j+1)}=r_{\pi_k}+\gamma  P_{\pi_k} v_{\pi_k}^{(j)},\quad j=0,1,2,...
+\end{align*}
+\end{itemize}
+
+Already studied in the lecture about Bellman equation.
+
+\pause
+\vspace{10pt}
+\blue{\hl Policy iteration is an iterative algorithm with another iterative algorithm embedded in the policy evaluation step!}
+
+\end{frame}
+%--------------------------------------
+\begin{frame}
+\frametitle{Policy iteration algorithm}
+
+\hl \red{Q2: In the policy improvement step, why is the new policy $\pi_{k+1}$ better than $\pi_k$?}
+
+\pause
+\begin{lemma}[Policy Improvement]\label{lemma_PIAlgoPolicyImprove}
+If $\pi_{k+1}=\arg\max_{\pi} (r_\pi +\gamma  P_\pi v_{\pi_k})$, then $v_{\pi_{k+1}}\ge v_{\pi_{k}}$ for any $k$.
+\end{lemma}
+
+See the proof in the book.
+
+\end{frame}
+%--------------------------------------
+\begin{frame}
+\frametitle{Policy iteration algorithm}
+
+\hl \red{Q3: Why can such an iterative algorithm finally reach an optimal policy?}
+
+\pause
+Since every iteration would improve the policy, we know
+$$v_{\pi_0}\le v_{\pi_1}\le v_{\pi_2}\le\dots\le v_{\pi_{k}} \le \dots\le v^*.$$
+As a result, $v_{\pi_k}$ keeps \textbf{increasing} and will converge.
+
+\pause
+\vspace{10pt}
+Still need to prove that it converges to the optimal value $v^*$.
+
+\begin{theorem}[Convergence of Policy Iteration]
+The state value sequence $\{v_{\pi_k}\}_{k=0}^\infty$ generated by the policy iteration algorithm converges to the optimal state value $v^*$. As a result, the policy sequence $\{\pi_k\}_{k=0}^\infty$ converges to an optimal policy.
+\end{theorem}
+
+The proof is given in my book.
+
+\end{frame}
+%--------------------------------------
+\begin{frame}
+\frametitle{Policy iteration algorithm}
+
+
+\hl \red{Q4: What is the relationship between policy iteration and value iteration algorithms?}
+
+Will be explained in detail later.
+
+\end{frame}
+%--------------------------------------
+\begin{frame}
+\frametitle{Policy iteration algorithm - Elementwise form}
+
+\blue{Step 1: Policy evaluation}
+
+\pause
+
+\hl Matrix-vector form: $v_{\pi_k}^{(j+1)}=r_{\pi_k}+\gamma P_{\pi_k}v_{\pi_k}^{(j)},\quad j=0,1,2,\dots$
+
+\pause
+\hl Elementwise form:
+\begin{align*}
+v_{\pi_k}^{(j+1)}(s)=\sum_{a}{\pi_k(a|s)}\left(\sum_{r}p(r|s,a)r + \gamma \sum_{s'}p(s'|s,a)\red{v_{\pi_k}^{(j)}(s')}\right),\quad s\in\mathcal{S}
+\end{align*}
+Stop when $j$ is sufficiently large or $\|v_{\pi_k}^{(j+1)}-v_{\pi_k}^{(j)}\|$ is sufficiently small.
+\end{frame}
+%--------------------------------------
+\begin{frame}
+\frametitle{Policy iteration algorithm - Elementwise form}
+\blue{Step 2: Policy improvement}
+
+\pause
+\hl Matrix-vector form: $\pi_{k+1}=\arg\max_{\pi} (r_\pi +\gamma  P_\pi \red{v_{\pi_k}})$
+
+\pause
+\hl Elementwise form
+{\footnotesize
+\begin{align*}
+\pi_{k+1}\blue{(s)}=\arg\max_\pi \sum_{a}{\pi(a|s)}\underbrace{\left(\sum_{r}p(r|s,a)r + \gamma \sum_{s'}p(s'|s,a)\red{v_{\pi_k}(s')}\right)}_{q_{\pi_k}(s,a)},\quad s\in\mathcal{S}.
+\end{align*}
+}
+
+Here, $q_{\pi_k}(s,a)$ is the action value under policy $\pi_k$.
+Let
+$$a^*_k(s)=\arg\max_a q_{\pi_k}(a,s)$$
+Then, the greedy policy is
+\begin{align*}%\label{eq_optimalPolicyDeterministic}
+{\pi_{k+1}(a|s)=
+\left\{
+  \begin{array}{ll}
+   1 & a=a^*_k(s), \\
+   0 & a\ne a^*_k(s). \\
+  \end{array}
+\right.}
+\end{align*}
+
+\end{frame}
+%--------------------------------------
+\begin{frame}
+\frametitle{Policy iteration algorithm - Implementation}
+\footnotesize
+\begin{figure}[t]
+\begin{mdframed}[style=myAlgo,nobreak=true,frametitle={Pseudocode: Policy iteration algorithm}]
+{\fontfamily{cmss}\selectfont
+\textbf{Initialization:} The probability models $p(r|s,a)$ and $p(s'|s,a)$ for all $(s,a)$ are known. Initial guess $\pi_0$.
+
+\textbf{Aim:} Search for the optimal state value and an optimal policy.
+
+While $v_{\pi_k}$ has not converged, for the $k$th iteration, do
+
+\qquad \blue{\emph{Policy evaluation:}}
+
+\qquad Initialization: an arbitrary initial guess $v_{\pi_k}^{(0)}$
+
+\qquad While $v_{\pi_k}^{(j)}$ has not converged, for the $j$th iteration, do
+
+\qquad\qquad For every state $s\in\S$, do
+
+\qquad\qquad\qquad $v_{\pi_k}^{(j+1)}(s)=\sum_{a}{\pi_k(a|s)}\left[\sum_{r}p(r|s,a)r + \gamma \sum_{s'}p(s'|s,a) {v_{\pi_k}^{(j)}(s')}\right]$
+
+\qquad \blue{\emph{Policy improvement:}}
+
+\qquad For every state $s\in\S$, do
+
+\qquad\qquad For every action $a\in\A$, do
+
+\qquad\qquad\qquad $q_{\pi_k}(s,a)=\sum_{r}p(r|s,a)r + \gamma \sum_{s'}p(s'|s,a)v_{\pi_k}(s')$
+
+\qquad\qquad $a^*_k(s)=\arg\max_a q_{\pi_k}(s,a)$
+
+\qquad\qquad $\pi_{k+1}(a|s)=1$ if $a=a^*_k$, and $\pi_{k+1}(a|s)=0$ otherwise
+}
+\end{mdframed}
+\end{figure}
+\end{frame}
+%--------------------------------------
+\begin{frame}
+\frametitle{Policy iteration algorithm - Simple example}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.55\linewidth]{fig_demoPIAlgo1D2Grid}
+  %\caption{An example to illustrate the implementation of the policy iteration algorithm.}
+  %\label{figChapterVIPI_demoPI}
+\end{figure}
+
+\begin{itemize}
+\item The reward setting is $r_{\rm boundary}=-1$ and $r_{\rm target}=1$. The discount rate is $\gamma=0.9$.
+\item Actions: $a_\ell, a_0, a_r$ represent going left, staying still, and going right, respectively.
+\item Goal: use the policy iteration algorithm to find out an optimal policy.
+\end{itemize}
+\end{frame}
+%--------------------------------------
+\begin{frame}
+\frametitle{Policy iteration algorithm - Simple example}
+\hl Iteration $k=0$: \blue{Step 1: policy evaluation}
+
+$\pi_0$ is selected as the policy in Figure (a). The Bellman equation is
+\vspace{-5pt}
+\begin{align*}
+v_{\pi_0}(s_1)&=-1+\gamma v_{\pi_0}(s_1),\\
+v_{\pi_0}(s_2)&=0+\gamma v_{\pi_0}(s_1).
+\end{align*}
+\vspace{-20pt}
+\pause
+\begin{itemize}
+\item Solve the equations directly:
+$$v_{\pi_0}(s_1)=-10,\quad v_{\pi_0}(s_2)=-9.$$
+\pause
+\vspace{-15pt}
+\item Solve the equations iteratively. Select the initial guess as $v_{\pi_0}^{(0)}(s_1)=v_{\pi_0}^{(0)}(s_2)=0$:
+{\footnotesize
+\begin{align*}
+&\left\{
+  \begin{array}{l}
+    v_{\pi_0}^{(1)}(s_1)=-1+\gamma v_{\pi_0}^{(0)}(s_1)=-1, \\
+    v_{\pi_0}^{(1)}(s_2)=0+\gamma v_{\pi_0}^{(0)}(s_1)=0, \\
+  \end{array}
+\right.\\
+&\left\{
+  \begin{array}{l}
+    v_{\pi_0}^{(2)}(s_1)=-1+\gamma v_{\pi_0}^{(1)}(s_1)=-1.9, \\
+    v_{\pi_0}^{(2)}(s_2)=0+\gamma v_{\pi_0}^{(1)}(s_1)=-0.9, \\
+  \end{array}
+\right.\\
+&\left\{
+  \begin{array}{l}
+    v_{\pi_0}^{(3)}(s_1)=-1+\gamma v_{\pi_0}^{(2)}(s_1)=-2.71, \\
+    v_{\pi_0}^{(3)}(s_2)=0+\gamma v_{\pi_0}^{(2)}(s_1)=-1.71, \\
+  \end{array}
+\right.\\
+&\qquad\dots
+\end{align*}
+}
+\end{itemize}
+
+\end{frame}
+%--------------------------------------
+\begin{frame}
+\frametitle{Policy iteration algorithm - Simple example}
+\hl Iteration $k=0$: \blue{Step 2: policy improvement}
+
+The expression of $q_{\pi_k}(s,a)$:
+{\footnotesize
+\begin{table}[h]
+\centering
+\begin{tabular}{|c|c|c|c|}%{|c|p{2cm}|p{2cm}|p{2cm}|}
+  % after \\: \hline or \cline{col1-col2} \cline{col3-col4} ...
+  \hline
+  $q_{\pi_k}(s,a)$ & \blue{$a_\ell$} & \blue{$a_0$} & \blue{$a_r$} \\
+  \hline
+  \blue{$s_1$} & $-1+\gamma v_{\pi_k}(s_1)$ & $0+\gamma v_{\pi_k}(s_1)$ & $1+\gamma v_{\pi_k}(s_2)$\\
+  \hline
+  \blue{$s_2$} & $0+\gamma v_{\pi_k}(s_1)$ & $1+\gamma v_{\pi_k}(s_2)$ & $-1+\gamma v_{\pi_k}(s_2)$\\
+  \hline
+\end{tabular}
+%\caption{The expression of $q_{\pi_k}(s,a)$ for the example in Figure~\ref{figChapterVIPI_demoPI}.}
+%\label{table_qvalueExpressionForDemoPI}
+\end{table}
+}
+
+\pause
+Substituting $v_{\pi_0}(s_1)=-10, v_{\pi_0}(s_2)=-9$ and $\gamma=0.9$ gives
+\begin{table}[h!]
+\centering
+\resizebox{0.4\columnwidth}{!}{
+\begin{tabular}{|c|c|c|c|}%{|c|p{2cm}|p{2cm}|p{2cm}|}
+  % after \\: \hline or \cline{col1-col2} \cline{col3-col4} ...
+  \hline
+  $q_{\pi_0}(s,a)$ & \blue{$a_\ell$} & \blue{$a_0$} & \blue{$a_r$} \\
+  \hline
+  \blue{$s_1$} & $-10$ & $-9$ & $\textcolor{red}{-7.1}$\\
+  \hline
+  \blue{$s_2$} & $-9$ & $\textcolor{red}{-7.1}$ & $-9.1$\\
+  \hline
+\end{tabular}
+}
+%\caption{The value of $q_{\pi_k}(s,a)$ when $k=0$.}
+%\label{table_qvalueExpressionForDemoPIk0}
+\end{table}
+
+\pause
+By seeking the greatest value of $q_{\pi_0}$, the improved new policy is:
+$$\pi_1(a_r|s_1)=1, \quad \pi_1(a_0|s_2)=1.$$
+This policy is optimal after one iteration! In your programming, should continue until the stopping criterion is satisfied.
+\end{frame}
+
+%--------------------------------------
+\begin{frame}
+\frametitle{Policy iteration algorithm - Simple example}
+
+\textbf{Exercise:} Set the left cell as the target area.
+
+\vspace{10pt}
+\pause
+\begin{itemize}
+\item Now we have another powerful algorithm searching for optimal policies!
+\item Next let's apply it and see what we can find.
+\end{itemize}
+
+\end{frame}
+%--------------------------------------
+\begin{frame}
+\frametitle{Policy iteration algorithm - Complicated example}
+\hl Setting: $r_{\rm boundary}=-1$, $r_{\rm forbidden}=-10$, $r_{\rm target}=1$, $\gamma=0.9$.
+
+\hl Let's check out the intermediate policies and state values.
+\vspace{-10pt}
+\captionsetup[subfigure]{labelformat=empty}
+\begin{figure}[]
+  \centering
+  \visible<1->{
+  \subfloat[$\pi_0$ and $v_{\pi_0}$]{
+  \includegraphics[width=0.23\linewidth]{fig_gridPolicy_PIPolicy0.pdf}
+  \includegraphics[width=0.23\linewidth]{fig_gridPolicy_PIValue0.pdf}
+  }}
+  \visible<2->{\subfloat[$\pi_1$ and $v_{\pi_1}$]{
+  \includegraphics[width=0.23\linewidth]{fig_gridPolicy_PIPolicy1.pdf}
+  \includegraphics[width=0.23\linewidth]{fig_gridPolicy_PIValue1.pdf}
+  }}\\
+  \visible<3->{\subfloat[$\pi_2$ and $v_{\pi_2}$]{
+  \includegraphics[width=0.23\linewidth]{fig_gridPolicy_PIPolicy2.pdf}
+  \includegraphics[width=0.23\linewidth]{fig_gridPolicy_PIValue2.pdf}
+  }}
+  \visible<4->{\subfloat[$\pi_3$ and $v_{\pi_3}$]{
+  \includegraphics[width=0.23\linewidth]{fig_gridPolicy_PIPolicy3.pdf}
+  \includegraphics[width=0.23\linewidth]{fig_gridPolicy_PIValue3.pdf}
+  }}
+\end{figure}
+\end{frame}
+%--------------------------------------
+\begin{frame}
+\frametitle{Policy iteration algorithm - Complicated example}
+\hl Interesting pattern of the policies and state values
+\captionsetup[subfigure]{labelformat=empty}
+\vspace{-10pt}
+\begin{figure}[]
+  \centering
+  \subfloat[$\pi_4$ and $v_{\pi_4}$]{
+  \includegraphics[width=0.23\linewidth]{fig_gridPolicy_PIPolicy4.pdf}
+  \includegraphics[width=0.23\linewidth]{fig_gridPolicy_PIValue4.pdf}
+  }
+  \visible<2->{\subfloat[$\pi_5$ and $v_{\pi_5}$]{
+  \includegraphics[width=0.23\linewidth]{fig_gridPolicy_PIPolicy5.pdf}
+  \includegraphics[width=0.23\linewidth]{fig_gridPolicy_PIValue5.pdf}
+  }}\\
+  \visible<3->{\vspace{-10pt}
+  \begin{center}$\vdots$\qquad\qquad\qquad\qquad\qquad\qquad\qquad\qquad$\vdots$\end{center}
+  \vspace{-10pt}}
+  \visible<4->{\subfloat[$\pi_{9}$ and $v_{\pi_{9}}$]{
+  \includegraphics[width=0.23\linewidth]{fig_gridPolicy_PIPolicy9.pdf}
+  \includegraphics[width=0.23\linewidth]{fig_gridPolicy_PIValue9.pdf}
+  }}
+  \visible<5->{\subfloat[$\pi_{10}$ and $v_{\pi_{10}}$]{
+  \includegraphics[width=0.23\linewidth]{fig_gridPolicy_PIPolicy10.pdf}
+  \includegraphics[width=0.23\linewidth]{fig_gridPolicy_PIValue10.pdf}
+  }}
+\end{figure}
+\end{frame}
+%--------------------------------------
+\AtBeginSection[]% put it to the start of each section
+{
+  \begin{frame}
+    \frametitle{Outline}
+    \tableofcontents[currentsection]
+  \end{frame}
+}
+\section{Truncated policy iteration algorithm}
+\begin{frame}
+\frametitle{Compare value iteration and policy iteration}
+\textbf{Policy iteration:} \red{start from $\pi_0$}
+\begin{itemize}
+\item Policy evaluation (PE):
+$$v_{\pi_k}=r_{\pi_k}+\gamma  P_{\pi_k} v_{\pi_k}$$
+\item Policy improvement (PI):
+\begin{align*}
+\pi_{k+1}=\arg\max_{\pi} (r_\pi +\gamma  P_\pi \textcolor{orange}{v_{\pi_k}})
+\end{align*}
+\end{itemize}
+\pause
+\textbf{Value iteration:} \red{start from $v_0$}
+\begin{itemize}
+\item Policy update (PU): $$\pi_{k+1}=\arg\max_\pi (r_\pi +\gamma  P_\pi \textcolor{orange}{v_k})$$
+\item Value update (VU): $$v_{k+1}=r_{\pi_{k+1}} +\gamma  P_{\pi_{k+1}} v_k$$
+\end{itemize}
+
+\end{frame}
+%--------------------------------------
+\begin{frame}
+\frametitle{Compare value iteration and policy iteration}
+\hl The two algorithms are very similar:
+\begin{align*}
+\text{Policy iteration: } \pi_0\xrightarrow{PE} &v_{\pi_0}\xrightarrow{PI} \pi_1 \xrightarrow{PE} v_{\pi_1}\xrightarrow{PI} \pi_2 \xrightarrow{PE} v_{\pi_2}\xrightarrow{PI} \dots \\
+\text{Value iteration: \ \quad\qquad} &\,u_{0}\xrightarrow{PU} \pi_1' \xrightarrow{VU} u_{1}\xrightarrow{PU} \pi_2' \xrightarrow{VU} u_{2}\xrightarrow{PU} \dots
+\end{align*}
+\begin{itemize}
+\item PE=policy evaluation. PI=policy improvement.
+\item PU=policy update. VU=value update.
+\end{itemize}
+\end{frame}
+%--------------------------------------
+\begin{frame}
+\frametitle{Compare value iteration and policy iteration}
+
+\hl Let's compare the steps carefully:
+\vspace{-10pt}
+\begin{table}[]
+\centering
+{
+\resizebox{\columnwidth}{!}{
+    \begin{tabular}{l|l|l|p{3cm}}
+              \hline
+              % after \\: \hline or \cline{col1-col2} \cline{col3-col4} ...
+            &  Policy iteration algorithm & Value iteration algorithm & Comments\\
+              \hline
+            1) Policy: &  $\pi_0$ & N/A & \\
+              \hline
+            2) Value: &  $v_{\pi_0}=r_{\pi_0}+\gamma P_{\pi_0}v_{\pi_0}$ &   \blue{$v_0\doteq v_{\pi_0}$} & \\
+              \hline
+            3) Policy: &  $\pi_{1}=\arg\max_{\pi} (r_\pi +\gamma  P_\pi v_{\pi_0})$ &  $\pi_{1}=\arg\max_{\pi} (r_\pi +\gamma  P_\pi v_0)$ & The two policies are the same\\
+              \hline
+            4) Value: &   \red{$v_{\pi_1}=r_{\pi_1}+\gamma P_{\pi_1}v_{\pi_1}$} &  \red{$v_1=r_{\pi_1}+\gamma P_{\pi_1}v_0$} & $v_{\pi_1}\ge v_1$ since $v_{\pi_1}\ge v_{\pi_0}$ \\
+              \hline
+            5) Policy: & $\pi_{2}=\arg\max_{\pi} (r_\pi +\gamma  P_\pi v_{\pi_1})$ &  $\pi_{2}'=\arg\max_{\pi} (r_\pi +\gamma  P_\pi v_1)$ & \\
+            \hline
+            \vdots & \vdots & \vdots & \vdots\\
+            \hline
+    \end{tabular}
+}
+}
+\end{table}
+\pause
+\vspace{-5pt}
+Remarks:
+\begin{itemize}
+\item They start from the same initial condition.
+\item The first three steps are the same.
+\item The fourth step becomes different:
+\begin{itemize}
+\item[-] In policy iteration, solving $v_{\pi_1}=r_{\pi_1}+\gamma P_{\pi_1}v_{\pi_1}$ requires an iterative algorithm (an infinite number of iterations)
+\item[-] In value iteration, $v_1=r_{\pi_1}+\gamma P_{\pi_1}v_0$ is a one-step iteration
+\end{itemize}
+\end{itemize}
+\end{frame}
+%--------------------------------------
+\begin{frame}
+\frametitle{Compare value iteration and policy iteration}
+More specifically, examine the step of \blue{solving $v_{\pi_1}=r_{\pi_1}+\gamma P_{\pi_1}v_{\pi_1}$}:
+{\small
+\begin{align*}
+&\red{v_{\pi_1}^{(0)}=v_{0}}\\
+\visible<2->{\text{value iteration}\leftarrow\red{v_1\longleftarrow}}
+ &v_{\pi_1}^{(1)}=r_{\pi_1}+\gamma P_{\pi_1}v_{\pi_1}^{(0)}\\
+&v_{\pi_1}^{(2)}=r_{\pi_1}+\gamma P_{\pi_1}v_{\pi_1}^{(1)}\\
+&\quad\vdots  \\
+\visible<4->{\text{\red{truncated policy iteration}}\leftarrow\red{\bar{v}_1\longleftarrow}} &v_{\pi_1}^{(j)}=r_{\pi_1}+\gamma P_{\pi_1}v_{\pi_1}^{(j-1)}\\
+&\quad\vdots  \\
+\visible<3->{\text{policy iteration}\leftarrow\red{v_{\pi_1}\longleftarrow}} &v_{\pi_1}^{(\infty)}=r_{\pi_1}+\gamma P_{\pi_1}v_{\pi_1}^{(\infty)}\\
+\end{align*}
+}
+\vspace{-30pt}
+\visible<5->{
+\begin{itemize}
+\item The \red{value iteration} algorithm computes \blue{once}.
+\item The \red{policy iteration} algorithm computes \blue{an infinite number of iterations}.
+\item The \red{truncated policy iteration} algorithm computes \blue{a finite number of iterations} (say $j$). The rest iterations from $j$ to $\infty$ are truncated.
+\end{itemize}
+}
+\end{frame}
+%--------------------------------------
+\begin{frame}
+\frametitle{Truncated policy iteration - Pseudocode}
+
+\begin{figure}[t]
+{\scriptsize
+\begin{mdframed}[style=myAlgo,nobreak=true,frametitle={Pseudocode: Truncated policy iteration algorithm}]
+{\fontfamily{cmss}\selectfont
+\textbf{Initialization:} The probability model $p(r|s,a)$ and $p(s'|s,a)$ for all $(s,a)$ are known. Initial guess $\pi_0$.
+
+\textbf{Aim:} Search for the optimal state value and an optimal policy.
+
+While $v_k$ has not converged, for the $k$th iteration, do
+
+\qquad \blue{Policy evaluation:}
+
+\setlength{\leftskip}{2em}
+Initialization: select the initial guess as $v_{k}^{(0)}=v_{k-1}$. The maximum iteration is set to be $j_{\rm truncate}$.
+
+While $j< j_{\rm truncate}$, do
+
+\setlength{\leftskip}{4em}  For every state $s\in\S$, do
+
+\setlength{\leftskip}{6em}  $v_{k}^{(j+1)}(s)=\sum_{a}{\pi_k(a|s)}\left[\sum_{r}p(r|s,a)r + \gamma \sum_{s'}p(s'|s,a)v_{k}^{(j)}(s')\right]$
+
+\setlength{\leftskip}{2em}
+Set $v_{k}=v_{k}^{(j_{\rm truncate})}$
+
+\setlength{\leftskip}{2em}
+\blue{Policy improvement:}
+
+\setlength{\leftskip}{2em}
+For every state $s\in\S$, do
+
+\setlength{\leftskip}{4em}
+For every action $a\in\A(s)$, do
+
+\setlength{\leftskip}{6em}
+$q_{k}(s,a)=\sum_{r}p(r|s,a)r + \gamma \sum_{s'}p(s'|s,a)v_{k}(s')$
+
+\setlength{\leftskip}{4em}
+$a^*_k(s)=\arg\max_a q_{k}(s,a)$
+
+\qquad\qquad
+$\pi_{k+1}(a|s)=1$ if $a=a^*_k$, and $\pi_{k+1}(a|s)=0$ otherwise
+}
+\end{mdframed}
+}
+\end{figure}
+\end{frame}
+%--------------------------------------
+\begin{frame}
+\frametitle{Truncated policy iteration - Convergence}
+
+\hl Will the truncation undermine convergence?
+
+\begin{proposition}[Value Improvement]\label{proposition_TPIValueImprovement}
+Consider the iterative algorithm for solving the policy evaluation step:
+\begin{align*}
+v_{\pi_k}^{(j+1)}=r_{\pi_k}+\gamma  P_{\pi_k} v_{\pi_k}^{(j)},\quad j=0,1,2,...
+\end{align*}
+If the initial guess is selected as $v_{\pi_k}^{(0)}=v_{\pi_{k-1}}$, it holds that
+$$v_{\pi_k}^{(j+1)}\ge v_{\pi_k}^{(j)}$$
+for every $j=0,1,2,\dots$.
+\end{proposition}
+For the proof, see the book.
+\end{frame}
+%--------------------------------------
+\begin{frame}
+\frametitle{Truncated policy iteration - Convergence}
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.5\linewidth]{fig_demoConvergenceThreeCurves}
+  \caption{Illustration of the relationship among value iteration, policy iteration, and truncated policy iteration.}
+  \label{figChapterVIPI_demoThreeAlgoConvergenceSpeed}
+\end{figure}
+
+\vspace{-10pt}
+
+The convergence proof of PI is based on that of VI. Since VI converges, we know PI converges.
+\end{frame}
+%%--------------------------------------
+%\begin{frame}
+%\frametitle{Truncated policy iteration - Example}
+%\hl Setup: The same as the previous example. Below is the initial policy.
+%
+%\begin{figure}[t]
+%  \centering
+%  \includegraphics[width=0.4\linewidth]{fig_gridPolicy_PIPolicy0.pdf}
+%\end{figure}
+%
+%\hl Define $\|v_k-v^*\|$ as the state value error at time $k$. The stop criterion is $\|v_k-v^*\|<0.01$.
+%
+%\end{frame}%
+%%--------------------------------------
+%\begin{frame}
+%\frametitle{Truncated policy iteration - Example}
+%\begin{figure}[t]
+%  \centering
+%    \includegraphics[width=0.7\linewidth]{fig_compareVIPITPI}
+%\end{figure}
+%
+%\hl ``Truncated policy iteration-$x$'' where $x=1,3,6,100$ refers to a truncated policy iteration algorithm where the policy evaluation step runs $x$ iterations.
+%\end{frame}
+%%--------------------------------------
+%\begin{frame}
+%\frametitle{Truncated policy iteration - Example}
+%\begin{figure}[t]
+%  \centering
+%    \includegraphics[width=0.7\linewidth]{fig_compareVIPITPI}
+%\end{figure}
+%
+%\hl The greater the value of $x$ is, the faster the value estimate converges.
+%
+%\hl However, the benefit of increasing $x$ drops quickly when $x$ is large.
+%
+%\hl In practice, run a few number of iterations in the policy evaluation step.
+%
+%\end{frame}
+%--------------------------------------
+\begin{frame}
+\frametitle{Summary}
+
+\hl Value iteration: it is the iterative algorithm solving the Bellman optimality equation: given an initial value $v_0$,
+\begin{align*}
+\left.
+  \begin{array}{c}
+    v_{k+1}=\max_{\pi}(r_\pi+\gamma P_{\pi} v_k) \\
+    \Updownarrow \\
+    \left\{
+                                                               \begin{array}{l}
+                                                                 \text{Policy update: } \pi_{k+1}=\arg\max_{\pi}(r_\pi+\gamma P_\pi v_k) \\
+                                                                 \text{Value update: }
+                                                                 v_{k+1}= r_{\pi_{k+1}}+\gamma P_{\pi_{k+1}} v_k\\
+                                                               \end{array}
+                                                             \right. \\
+  \end{array}
+\right.
+\end{align*}
+\hl Policy iteration: given an initial policy $\pi_0$,
+\begin{align*}
+\left\{
+                                                               \begin{array}{l}
+                                                                 \text{Policy evaluation: } v_{\pi_k}=r_{\pi_k}+\gamma  P_{\pi_k} v_{\pi_k} \\
+                                                                 \text{Policy improvement: }\pi_{k+1}=\arg\max_{\pi} (r_\pi +\gamma  P_\pi v_{\pi_k})\\
+                                                               \end{array}
+                                                             \right.
+\end{align*}
+
+\hl Truncated policy iteration
+\end{frame}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%\bibliographystyle{plainnat}
+%\bibliography{myOwnPub,zsyReferenceAll}
+\end{document}
